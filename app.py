@@ -276,9 +276,18 @@ def download_sample_reports(company):
     try:
         filename = url.split('/')[-1]
         path = os.path.join(folder, filename)
+
         response = requests.get(url)
+        response.raise_for_status()
+
         with open(path, 'wb') as f:
             f.write(response.content)
+
+        # Confirm size
+        if os.path.getsize(path) < 1000:
+            os.remove(path)
+            return jsonify({"error": "Downloaded file is too small or corrupt."}), 500
+
         return jsonify({"message": "Downloaded", "company": company, "file": filename})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
