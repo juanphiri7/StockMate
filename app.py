@@ -190,6 +190,33 @@ def get_fundamentals(counter):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@app.route('/history/<counter>', methods=['GET'])
+def get_price_history(counter):
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT DATE(timestamp), last_price
+            FROM stocks
+            WHERE counter = ?
+            ORDER BY timestamp ASC
+        ''', (counter,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        # Clean and format results
+        history = []
+        for row in rows:
+            date_str = row[0]
+            try:
+                price = float(str(row[1]).replace(',', ''))
+                history.append({"date": date_str, "price": price})
+            except:
+                continue
+
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
         
 # Auto-scraping every hour
 def scheduled_scrape():
