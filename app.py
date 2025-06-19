@@ -327,6 +327,18 @@ def extract_fundamentals(company):
 
     return jsonify(fundamentals)
 
+@app.route('/list_reports/<company>', methods=['GET'])
+def list_reports(company):
+    import os
+    company = company.upper()
+    folder = f'reports/{company}'
+
+    if not os.path.exists(folder):
+        return jsonify({"message": "Folder not found"}), 404
+
+    files = os.listdir(folder)
+    return jsonify({"files": files})
+
 # Auto-scraping every hour
 def scheduled_scrape():
     print("Scheduled scrape running...")
