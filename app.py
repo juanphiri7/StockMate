@@ -281,6 +281,47 @@ def download_sample_reports(company):
         return jsonify({"message": "Downloaded", "company": company, "file": filename})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@app.route('/extract_fundamentals/<company>', methods=['GET'])
+def extract_fundamentals(company):
+    import os, fitz, re, json
+
+    company = company.upper()
+    folder = f'reports/{company}'
+    if not os.path.exists(folder):
+        return jsonify({"error": "No reports found for this company"}), 404
+
+    # Find latest PDF file
+    files = [f for f in os.listdir(folder) if f.endswith('.pdf')]
+    if not files:
+        return jsonify({"error": "No PDF files found"}), 404
+
+    pdf_path = os.path.join(folder, sorted(files)[-1])
+    doc = fitz.open(pdf_path)
+
+    full_text = ""
+    for page in doc:
+        full_text += page.get_text()
+
+    # Simple regex patterns
+    profit_match = re.search(r'Net Profit\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
+    equity_match = re.search(r'Total Equity\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
+    shares_match = re.search(r'Shares.*?Outstanding\s*[:\-]?\s*([\d,]+)', full_text, re.IGNORECASE)
+    dividend_match = re.search(r'Dividend.*?Paid\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
+
+    fundamentals = {
+        "company": company,
+        "net_profit": profit_match.group(1) if profit_match else "Not found",
+        "equity": equity_match.group(1) if equity_match else "Not found",
+        "shares_outstanding": shares_match.group(1) if shares_match else "Not found",
+        "dividend_paid": dividend_match.group(1) if dividend_match else "Not found"
+    }
+
+    # Save to fundamentals.json
+    os.makedirs("data", exist_ok=True)
+    with open("data/fundamentals.json", "w") as f:
+        json.dump({company: fundamentals}, f, indent=2)
+
+    return jsonify(fundamentals)
 
 # Auto-scraping every hour
 def scheduled_scrape():
