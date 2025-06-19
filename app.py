@@ -261,11 +261,11 @@ def download_sample_reports(company):
 
     company = company.upper()
     pdf_links = {
-        "NICO": "https://mse.co.mw/wp-content/uploads/2024/04/NICO-Annual-Report-2023.pdf",
-        "AIRTEL": "https://mse.co.mw/wp-content/uploads/2024/03/AIRTEL-Financials-2023.pdf",
-        "FMBCH": "https://mse.co.mw/wp-content/uploads/2024/04/FMBCH-FY23.pdf"
+    "NICO": "https://mse.co.mw/wp-content/uploads/2024/04/NICO-Annual-Report-2023.pdf",
+    "FMBCH": "https://mse.co.mw/wp-content/uploads/2024/04/FMBCH-FY23.pdf",
+    "STAND": "https://mse.co.mw/wp-content/uploads/2024/04/STAND-FY23-Financials.pdf"
     }
-
+    
     if company not in pdf_links:
         return jsonify({"error": f"No sample report found for {company}"}), 404
 
