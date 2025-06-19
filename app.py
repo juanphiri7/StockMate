@@ -223,35 +223,37 @@ def download_company_reports(company):
     import os, requests
     from bs4 import BeautifulSoup
 
-    base_url = 'https://www.mse.co.mw/announcements/accounts/'
-    response = requests.get(base_url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-
     company = company.upper()
-    downloaded = []
+    base_url = 'https://www.mse.co.mw/announcements/accounts/'
+    r = requests.get(base_url)
+    soup = BeautifulSoup(r.content, 'html.parser')
+
     folder = f'reports/{company}'
     os.makedirs(folder, exist_ok=True)
+    downloaded = []
 
+    # Find links with PDF filenames
     for a in soup.select('a[href$=".pdf"]'):
-        href = a['href']
         text = a.get_text().upper()
+        href = a['href']
         if company in text:
             url = href if href.startswith('http') else f'https://www.mse.co.mw{href}'
-            name = url.split('/')[-1]
-            path = os.path.join(folder, name)
+            fname = url.split('/')[-1]
+            path = os.path.join(folder, fname)
             try:
-                r = requests.get(url)
+                pdf = requests.get(url)
+                pdf.raise_for_status()
                 with open(path, 'wb') as f:
-                    f.write(r.content)
-                downloaded.append(name)
+                    f.write(pdf.content)
+                downloaded.append(fname)
             except Exception as e:
-                print("Download failed:", e)
+                print(f"Failed downloading {url}: {e}")
 
     if not downloaded:
         return jsonify({"message": f"No reports found for {company}."}), 404
 
     return jsonify({"company": company, "downloaded": downloaded})
-    
+
 # Auto-scraping every hour
 def scheduled_scrape():
     print("Scheduled scrape running...")
