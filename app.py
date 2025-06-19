@@ -281,6 +281,7 @@ def download_sample_reports(company):
         return jsonify({"message": "Downloaded", "company": company, "file": filename})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 @app.route('/extract_fundamentals/<company>', methods=['GET'])
 def extract_fundamentals(company):
     import os, fitz, re, json
@@ -296,7 +297,10 @@ def extract_fundamentals(company):
         return jsonify({"error": "No PDF files found"}), 404
 
     pdf_path = os.path.join(folder, sorted(files)[-1])
-    doc = fitz.open(pdf_path)
+    try:
+        doc = fitz.open(pdf_path)
+    except Exception as e:
+        return jsonify({"error": f"Failed to open PDF: {str(e)}"}), 500
 
     full_text = ""
     for page in doc:
