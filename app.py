@@ -224,30 +224,30 @@ def download_company_reports(company):
     from bs4 import BeautifulSoup
 
     company = company.upper()
-    base_url = 'https://www.mse.co.mw/announcements/accounts/'
-    r = requests.get(base_url)
-    soup = BeautifulSoup(r.content, 'html.parser')
+    url = 'https://www.mse.co.mw/announcements/accounts/'
+    res = requests.get(url)
+    soup = BeautifulSoup(res.content, 'html.parser')
 
     folder = f'reports/{company}'
     os.makedirs(folder, exist_ok=True)
     downloaded = []
 
-    # Find links with PDF filenames
+    # Look for PDF links in the Published Accounts table
     for a in soup.select('a[href$=".pdf"]'):
         text = a.get_text().upper()
         href = a['href']
-        if company in text:
-            url = href if href.startswith('http') else f'https://www.mse.co.mw{href}'
-            fname = url.split('/')[-1]
-            path = os.path.join(folder, fname)
+        if company in text and 'FINANCIALS' in text:
+            link = href if href.startswith('http') else f'https://www.mse.co.mw{href}'
+            name = link.split('/')[-1]
+            path = os.path.join(folder, name)
             try:
-                pdf = requests.get(url)
+                pdf = requests.get(link)
                 pdf.raise_for_status()
                 with open(path, 'wb') as f:
                     f.write(pdf.content)
-                downloaded.append(fname)
+                downloaded.append(name)
             except Exception as e:
-                print(f"Failed downloading {url}: {e}")
+                print(f"Download error: {e}")
 
     if not downloaded:
         return jsonify({"message": f"No reports found for {company}."}), 404
