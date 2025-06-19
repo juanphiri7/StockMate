@@ -150,30 +150,50 @@ def price_history(counter):
 
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
+    def clean_number(val):
+        try:
+            return float(str(val).replace(',', ''))
+        except:
+            return 0.0
+
     try:
         with open(FUNDAMENTALS_PATH) as f:
             data = json.load(f)
+
         company = data.get(counter.upper())
         if not company:
             return jsonify({"error": "Data not available for this company"}), 404
 
-        eps = float(company['net_profit']) / float(company['shares_outstanding'])
-        bvps = float(company['book_value']) / float(company['shares_outstanding'])
+        net_profit = clean_number(company.get("net_profit", 0))
+        equity = clean_number(company.get("equity", 0))
+        shares_outstanding = clean_number(company.get("shares_outstanding", 0))
+        dividend = clean_number(company.get("dividend_paid", 0))
+        book_value = clean_number(company.get("book_value", equity))  # fallback to equity
+
+        eps = net_profit / shares_outstanding if shares_outstanding else 0
+        bvps = book_value / shares_outstanding if shares_outstanding else 0
 
         conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-        c = conn.cursor()
-        c.execute('SELECT last_price FROM stocks WHERE counter = ? ORDER BY timestamp DESC LIMIT 1', (counter,))
-        row = c.fetchone()
+        cursor = conn.cursor()
+        cursor.execute('SELECT last_price FROM stocks WHERE counter = ? ORDER BY timestamp DESC LIMIT 1', (counter,))
+        result = cursor.fetchone()
         conn.close()
 
-        price = float(row[0]) if row else None
+        if not result:
+            return jsonify({"error": "Price data not available"}), 404
+
+        price = float(result[0])
+        pe_ratio = price / eps if eps else None
+        pb_ratio = price / bvps if bvps else None
+        div_yield = (dividend / price) * 100 if price else None
+        roe = (net_profit / equity) * 100 if equity else None
 
         return jsonify({
-            "eps": f"{eps:.2f}",
-            "pe_ratio": f"{price / eps:.2f}" if eps else "N/A",
-            "pb_ratio": f"{price / bvps:.2f}" if bvps else "N/A",
-            "div_yield": f"{(float(company['dividend']) / price) * 100:.2f}%" if price else "N/A",
-            "roe": f"{(float(company['net_profit']) / float(company['equity'])) * 100:.2f}%" if company['equity'] else "N/A"
+            "eps": f"{eps:.2f}" if eps else "N/A",
+            "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
+            "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
+            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A",
+            "roe": f"{roe:.2f}%" if roe else "N/A"
         })
 
     except Exception as e:
