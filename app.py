@@ -220,7 +220,7 @@ def get_price_history(counter):
 
 @app.route('/download_reports/<company>', methods=['GET'])
 def download_company_reports(company):
-    base_url = 'https://www.mse.co.mw/'
+    base_url = 'https://www.mse.co.mw/announcements/accounts/'
     response = requests.get(base_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
