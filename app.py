@@ -217,7 +217,42 @@ def get_price_history(counter):
         return jsonify(history)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-        
+
+@app.route('/download_reports/<company>', methods=['GET'])
+def download_company_reports(company):
+    base_url = 'https://www.mse.co.mw/'
+    response = requests.get(base_url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    links = soup.find_all('a', href=True)
+    company = company.upper()
+    downloaded = []
+
+    # Create folder if it doesn't exist
+    os.makedirs(f'reports/{company}', exist_ok=True)
+
+    for link in links:
+        href = link['href']
+        if href.endswith('.pdf') and company in href.upper():
+            file_name = href.split('/')[-1]
+            file_path = f'reports/{company}/{file_name}'
+
+            try:
+                file_data = requests.get(href if 'http' in href else base_url + href)
+                with open(file_path, 'wb') as f:
+                    f.write(file_data.content)
+                downloaded.append(file_name)
+            except Exception as e:
+                print(f"Failed to download {href}: {e}")
+
+    if not downloaded:
+        return jsonify({"message": f"No reports found for {company}."}), 404
+
+    return jsonify({
+        "company": company,
+        "downloaded": downloaded
+    })
+    
 # Auto-scraping every hour
 def scheduled_scrape():
     print("Scheduled scrape running...")
