@@ -1,16 +1,10 @@
 {
   "NICO": {
-    "net_profit": 35000000000,
-    "shares_outstanding": 400000000,
-    "book_value": 60000000000,
-    "dividend": 2.0,
-    "equity": 70000000000
-  },
-  "AIRTEL": {
-    "net_profit": 42000000000,
-    "shares_outstanding": 400000000,
-    "book_value": 90000000000,
-    "dividend": 3.5,
-    "equity": 88000000000
+    "company": "NICO",
+    "net_profit": "28,765,000,000",
+    "equity": "123,000,000,000",
+    "shares_outstanding": "4,975,387,774",
+    "dividend_paid": "3,500,000,000",
+    "book_value": "123,000,000,000"
   }
 }
