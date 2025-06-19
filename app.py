@@ -220,38 +220,37 @@ def get_price_history(counter):
 
 @app.route('/download_reports/<company>', methods=['GET'])
 def download_company_reports(company):
+    import os, requests
+    from bs4 import BeautifulSoup
+
     base_url = 'https://www.mse.co.mw/announcements/accounts/'
     response = requests.get(base_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    links = soup.find_all('a', href=True)
     company = company.upper()
     downloaded = []
+    folder = f'reports/{company}'
+    os.makedirs(folder, exist_ok=True)
 
-    # Create folder if it doesn't exist
-    os.makedirs(f'reports/{company}', exist_ok=True)
-
-    for link in links:
-        href = link['href']
-        if href.endswith('.pdf') and company in href.upper():
-            file_name = href.split('/')[-1]
-            file_path = f'reports/{company}/{file_name}'
-
+    for a in soup.select('a[href$=".pdf"]'):
+        href = a['href']
+        text = a.get_text().upper()
+        if company in text:
+            url = href if href.startswith('http') else f'https://www.mse.co.mw{href}'
+            name = url.split('/')[-1]
+            path = os.path.join(folder, name)
             try:
-                file_data = requests.get(href if 'http' in href else base_url + href)
-                with open(file_path, 'wb') as f:
-                    f.write(file_data.content)
-                downloaded.append(file_name)
+                r = requests.get(url)
+                with open(path, 'wb') as f:
+                    f.write(r.content)
+                downloaded.append(name)
             except Exception as e:
-                print(f"Failed to download {href}: {e}")
+                print("Download failed:", e)
 
     if not downloaded:
         return jsonify({"message": f"No reports found for {company}."}), 404
 
-    return jsonify({
-        "company": company,
-        "downloaded": downloaded
-    })
+    return jsonify({"company": company, "downloaded": downloaded})
     
 # Auto-scraping every hour
 def scheduled_scrape():
