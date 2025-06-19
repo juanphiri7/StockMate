@@ -254,6 +254,34 @@ def download_company_reports(company):
 
     return jsonify({"company": company, "downloaded": downloaded})
 
+@app.route('/download_sample_reports/<company>', methods=['GET'])
+def download_sample_reports(company):
+    import os, requests
+
+    company = company.upper()
+    pdf_links = {
+        "NICO": "https://mse.co.mw/wp-content/uploads/2024/04/NICO-Annual-Report-2023.pdf",
+        "AIRTEL": "https://mse.co.mw/wp-content/uploads/2024/03/AIRTEL-Financials-2023.pdf",
+        "FMBCH": "https://mse.co.mw/wp-content/uploads/2024/04/FMBCH-FY23.pdf"
+    }
+
+    if company not in pdf_links:
+        return jsonify({"error": f"No sample report found for {company}"}), 404
+
+    url = pdf_links[company]
+    folder = f'reports/{company}'
+    os.makedirs(folder, exist_ok=True)
+
+    try:
+        filename = url.split('/')[-1]
+        path = os.path.join(folder, filename)
+        response = requests.get(url)
+        with open(path, 'wb') as f:
+            f.write(response.content)
+        return jsonify({"message": "Downloaded", "company": company, "file": filename})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Auto-scraping every hour
 def scheduled_scrape():
     print("Scheduled scrape running...")
