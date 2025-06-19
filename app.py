@@ -132,7 +132,65 @@ def latest_prices():
             "timestamp": r[5]
         } for r in rows
     ])
+@app.route('/price_history/<counter>', methods=['GET'])
+def price_history(counter):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT timestamp, last_price
+        FROM stocks
+        WHERE counter = ?
+        ORDER BY timestamp DESC
+        LIMIT 10
+    ''', (counter,))
+    rows = cursor.fetchall()
+    conn.close()
 
+    return jsonify([
+        {"timestamp": row[0], "price": row[1]} for row in reversed(rows)
+    ])
+
+@app.route('/fundamentals/<counter>', methods=['GET'])
+def get_fundamentals(counter):
+    import json
+    try:
+        with open('fundamentals.json') as f:
+            data = json.load(f)
+
+        company = data.get(counter.upper())
+        if not company:
+            return jsonify({"error": "Data not available for this company"}), 404
+
+        eps = company['net_profit'] / company['shares_outstanding']
+        bvps = company['book_value'] / company['shares_outstanding']
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT last_price FROM stocks WHERE counter = ? ORDER BY timestamp DESC LIMIT 1', (counter,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            price = float(str(result[0]).replace(',', ''))
+        else:
+            return jsonify({"error": "Price data not available"}), 404
+
+        pe_ratio = price / eps if eps else None
+        pb_ratio = price / bvps if bvps else None
+        div_yield = (company['dividend'] / price) * 100 if price else None
+        roe = (company['net_profit'] / company['equity']) * 100 if company['equity'] else None
+
+        return jsonify({
+            "eps": f"{eps:.2f}",
+            "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
+            "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
+            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A",
+            "roe": f"{roe:.2f}%" if roe else "N/A"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 # Auto-scraping every hour
 def scheduled_scrape():
     print("Scheduled scrape running...")
