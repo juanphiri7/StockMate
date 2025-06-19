@@ -190,6 +190,7 @@ def get_fundamentals(counter):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 @app.route('/history/<counter>', methods=['GET'])
 def get_price_history(counter):
     try:
@@ -295,8 +296,10 @@ def extract_fundamentals(company):
     files = [f for f in os.listdir(folder) if f.endswith('.pdf')]
     if not files:
         return jsonify({"error": "No PDF files found"}), 404
-
+    
     pdf_path = os.path.join(folder, sorted(files)[-1])
+    size = os.path.getsize(pdf_path)
+    print(f"File size: {size} bytes")
     try:
         doc = fitz.open(pdf_path)
     except Exception as e:
