@@ -1,12 +1,13 @@
-#StockMate 
+#StockMate by Juan
 
+# ========== Imports ==========
+import os, json, sqlite3, requests, pytz, fitz, re, atexit, qrcode
 from flask import Flask, jsonify, request, send_file
-import os, json, sqlite3, requests, pytz, fitz, re
 from apscheduler.schedulers.background import BackgroundScheduler
-import atexit
 from bs4 import BeautifulSoup
 from fpdf import FPDF
 from datetime import datetime
+from PIL import Image
 
 # ========== FLASK APP ==========
 app = Flask(__name__)
@@ -402,6 +403,37 @@ def fundamentals_report(counter):
         pdf.multi_cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange.\nAccuracy is not guaranteed.\nInvest wisely.")
 
         filename = f"{counter.upper()}-Fundamentals-Report.pdf"
+       
+        # === Generate QR Code ===
+        company_urls = {
+            "AIRTEL": "https://mse.co.mw/listed-companies/airtel-malawi-plc/",
+            "BHL": "https://mse.co.mw/listed-companies/bata-shoe-company-limited/",
+            "FDH": "https://mse.co.mw/listed-companies/fdh-bank-plc/",
+            "FMBCH": "https://mse.co.mw/listed-companies/fmbcapital-holdings-plc/",
+            "ICON": "https://mse.co.mw/listed-companies/icon-properties-plc/",
+            "ILLOVO": "https://mse.co.mw/listed-companies/illovo-sugar-malawi-plc/",
+            "MPICO": "https://mse.co.mw/listed-companies/mpico-plc/",
+            "NBS": "https://mse.co.mw/listed-companies/nbs-bank-plc/",
+            "NBM": "https://mse.co.mw/listed-companies/national-bank-of-malawi-plc/",
+            "NICO": "https://mse.co.mw/listed-companies/nico-holdings-plc/",
+            "NITL": "https://mse.co.mw/listed-companies/nitl-plc/",
+            "OMU": "https://mse.co.mw/listed-companies/old-mutual-investment-group/",
+            "PCL": "https://mse.co.mw/listed-companies/press-corporation-plc/",
+            "STANDARD": "https://mse.co.mw/listed-companies/standard-bank-plc/",
+            "SUNBIRD": "https://mse.co.mw/listed-companies/sunbird-tourism-plc/",
+            "TNM": "https://mse.co.mw/listed-companies/telekom-networks-malawi-plc/"
+        }
+            
+        qr_url = company_urls.get(counter.upper(), f"https://mse.co.mw/listed-companies/")
+        qr_img = qrcode.make(qr_url)
+
+        qr_path = f"qr_{counter}.png"
+        qr_img.save(qr_path)
+
+        # Insert QR into PDF
+        pdf.image(qr_path, x=160, y=250, w=30)
+        os.remove(qr_path)
+
         pdf.output(filename)
 
         return send_file(filename, as_attachment=True)
