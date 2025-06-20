@@ -5,6 +5,7 @@ import os, json, sqlite3, requests, fitz, re
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 from bs4 import BeautifulSoup
+from fpdf import FPDF
 
 app = Flask(__name__)
 
@@ -270,7 +271,72 @@ def stock_metrics(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-      
+@app.route('/fundamentals_report/<counter>', methods=['GET'])
+def fundamentals_report(counter):
+    try:
+        with open('fundamentals.json') as f:
+            data = json.load(f)
+
+        company = data.get(counter.upper())
+        if not company:
+            return jsonify({"error": "Data not available for this company"}), 404
+
+        net_profit = float(str(company['net_profit']).replace(',', ''))
+        equity = float(str(company['equity']).replace(',', ''))
+        shares = float(str(company['shares_outstanding']).replace(',', ''))
+        dividend = float(str(company['dividend_paid']).replace(',', ''))
+
+        eps = net_profit / shares if shares else 0
+        bvps = equity / shares if shares else 0
+
+        # Get current price
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT last_price FROM stocks
+            WHERE counter = ?
+            ORDER BY timestamp DESC LIMIT 1
+        ''', (counter,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            price = float(str(result[0]).replace(',', ''))
+        else:
+            return jsonify({"error": "Price data not available"}), 404
+
+        pe_ratio = price / eps if eps else None
+        pb_ratio = price / bvps if bvps else None
+        div_yield = (dividend / price) * 100 if price else None
+        roe = (net_profit / equity) * 100 if equity else None
+
+        # === Generate PDF ===
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, f"{counter.upper()} Fundamentals Report", ln=True, align='C')
+        pdf.ln(10)
+
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(200, 10, f"Net Profit: MK {net_profit:,.2f}", ln=True)
+        pdf.cell(200, 10, f"Equity: MK {equity:,.2f}", ln=True)
+        pdf.cell(200, 10, f"Shares Outstanding: {shares:,.0f}", ln=True)
+        pdf.cell(200, 10, f"Dividend Paid: MK {dividend:,.2f}", ln=True)
+        pdf.cell(200, 10, f"Last Price: MK {price:,.2f}", ln=True)
+        pdf.cell(200, 10, f"EPS: {eps:.2f}", ln=True)
+        pdf.cell(200, 10, f"P/E Ratio: {pe_ratio:.2f}" if pe_ratio else "N/A", ln=True)
+        pdf.cell(200, 10, f"P/B Ratio: {pb_ratio:.2f}" if pb_ratio else "N/A", ln=True)
+        pdf.cell(200, 10, f"Dividend Yield: {div_yield:.2f}%" if div_yield else "N/A", ln=True)
+        pdf.cell(200, 10, f"ROE: {roe:.2f}%" if roe else "N/A", ln=True)
+
+        file_path = f"{counter.upper()}-Fundamentals.pdf"
+        pdf.output(file_path)
+
+        return send_file(file_path, as_attachment=True)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500  
+        
 # ========== PDF DOWNLOAD ==========
 @app.route('/download_sample_reports/<company>', methods=['GET'])
 def download_sample_reports(company):
