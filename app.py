@@ -356,6 +356,7 @@ def fundamentals_report(counter):
         pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
         pdf.add_font("DejaVu", "B", "fonts/DejaVuSans.ttf", uni=True)
         pdf.add_font("DejaVu", "I", "fonts/DejaVuSans.ttf", uni=True)
+        pdf.add_font("DejaVu", "U", "fonts/DejaVuSans.ttf", uni=True)
         
         pdf.add_page()
         pdf.ln(10)
@@ -430,9 +431,15 @@ def fundamentals_report(counter):
         qr_img.save(qr_path)
 
         # Insert QR into PDF
-        pdf.image(qr_path, x=160, y=250, w=30)
-        os.remove(qr_path)
+        pdf.image(qr_path, x=160, y=245, w=30, h=30)
 
+        # Add clickable URL under QR
+        pdf.set_xy(130, 278)  # Adjust X and Y position for link text
+        pdf.set_text_color(0, 0, 255)  # Blue link color
+        pdf.set_font("DejaVu", "U", 10)  # Underlined font
+        pdf.cell(70, 10, "Visit:", ln=1, align='C', link=qr_url)
+        
+        os.remove(qr_path)
         pdf.output(filename)
 
         return send_file(filename, as_attachment=True)
