@@ -358,9 +358,18 @@ def fundamentals_report(counter):
         
         pdf.add_page()
         pdf.ln(10)
+        # ========== Company Logo + Name ==========
+        logo_path = f"company_logos/{counter.upper()}.png"
+        if os.path.exists(logo_path):
+            pdf.image(logo_path, x=10, y=pdf.get_y(), w=25)  # You can adjust x/y/w
+            pdf.set_xy(40, pdf.get_y() + 5)  # Adjust position to align text with logo
+        else:
+            pdf.set_x(10)
+    
         pdf.set_font("DejaVu", "B", 16)
         pdf.set_text_color(0)
         pdf.cell(0, 10, f"{counter.upper()} SNAPSHOT", ln=True)
+        pdf.ln(3)
 
         pdf.set_font("DejaVu", "", 12)
         pdf.cell(0, 10, f"Net Profit: MK {net_profit:,.2f}", ln=True)
