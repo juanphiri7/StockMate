@@ -300,7 +300,7 @@ class PDF(FPDF):
         self.set_font("DejaVu", "I", 10)
         self.set_xy(50, 20)
         self.cell(140, 8, "Smart Insights. Wise Investments.", ln=True, align='C')
-        self.In(10)
+        self.ln(10)
     
     def footer(self):
         self.set_y(-15)
