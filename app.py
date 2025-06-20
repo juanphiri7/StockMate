@@ -404,30 +404,29 @@ def fundamentals_report(counter):
 
         filename = f"{counter.upper()}-Fundamentals-Report.pdf"
        
-        # === Generate QR Code ===
+        # === Generate QR Code for MSE companies ===
         company_urls = {
-            "AIRTEL": "https://mse.co.mw/listed-companies/airtel-malawi-plc/",
-            "BHL": "https://mse.co.mw/listed-companies/bata-shoe-company-limited/",
-            "FDH": "https://mse.co.mw/listed-companies/fdh-bank-plc/",
-            "FMBCH": "https://mse.co.mw/listed-companies/fmbcapital-holdings-plc/",
-            "ICON": "https://mse.co.mw/listed-companies/icon-properties-plc/",
-            "ILLOVO": "https://mse.co.mw/listed-companies/illovo-sugar-malawi-plc/",
-            "MPICO": "https://mse.co.mw/listed-companies/mpico-plc/",
-            "NBS": "https://mse.co.mw/listed-companies/nbs-bank-plc/",
-            "NBM": "https://mse.co.mw/listed-companies/national-bank-of-malawi-plc/",
-            "NICO": "https://mse.co.mw/listed-companies/nico-holdings-plc/",
-            "NITL": "https://mse.co.mw/listed-companies/nitl-plc/",
-            "OMU": "https://mse.co.mw/listed-companies/old-mutual-investment-group/",
-            "PCL": "https://mse.co.mw/listed-companies/press-corporation-plc/",
-            "STANDARD": "https://mse.co.mw/listed-companies/standard-bank-plc/",
-            "SUNBIRD": "https://mse.co.mw/listed-companies/sunbird-tourism-plc/",
-            "TNM": "https://mse.co.mw/listed-companies/telekom-networks-malawi-plc/"
+            "AIRTEL": "https://mse.co.mw/company/MWAIRT001156",
+            "BHL": "https://mse.co.mw/company/MWBHL001164",
+            "FDH": "https://mse.co.mw/company/MWFDHB001178",
+            "FMBCH": "https://mse.co.mw/company/MWFMBCH00009",
+            "ICON": "https://mse.co.mw/company/MWICON001188",
+            "ILLOVO": "https://mse.co.mw/company/MWILLV001116",
+            "MPICO": "https://mse.co.mw/company/MWMPICO010010",
+            "NBS": "https://mse.co.mw/company/MWNBS001174",
+            "NBM": "https://mse.co.mw/company/MWNBM001113",
+            "NICO": "https://mse.co.mw/company/MWNICO010014",
+            "NITL": "https://mse.co.mw/company/MWNITL001117",
+            "OMU": "https://mse.co.mw/company/MWOMU001121",
+            "PCL": "https://mse.co.mw/company/MWPCL001111",
+            "STANDARD": "https://mse.co.mw/company/MWSB0001112",
+            "SUNBIRD": "https://mse.co.mw/company/MWSUN001119",
+            "TNM": "https://mse.co.mw/company/MWTNM001151"
         }
             
-        qr_url = company_urls.get(counter.upper(), f"https://mse.co.mw/listed-companies/")
+        qr_url = company_urls.get(counter.upper(), f"https://mse.co.mw")
         qr_img = qrcode.make(qr_url)
-
-        qr_path = f"qr_{counter}.png"
+        qr_path = f"{counter}_qr.png"
         qr_img.save(qr_path)
 
         # Insert QR into PDF
