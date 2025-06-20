@@ -155,7 +155,6 @@ def get_price_history(counter):
 
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
-    import json
     try:
         with open('fundamentals.json') as f:
             data = json.load(f)
@@ -164,12 +163,27 @@ def get_fundamentals(counter):
         if not company:
             return jsonify({"error": "Data not available for this company"}), 404
 
-        eps = company['net_profit'] / company['shares_outstanding']
-        bvps = company['book_value'] / company['shares_outstanding']
+        # Parse and clean numerical values
+        try:
+            net_profit = float(str(company['net_profit']).replace(',', ''))
+            equity = float(str(company['equity']).replace(',', ''))
+            shares = float(str(company['shares_outstanding']).replace(',', ''))
+            dividend = float(str(company['dividend_paid']).replace(',', ''))
+        except Exception as e:
+            return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
+        eps = net_profit / shares if shares else 0
+        bvps = equity / shares if shares else 0
+
+        # Fetch latest price
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT last_price FROM stocks WHERE counter = ? ORDER BY timestamp DESC LIMIT 1', (counter,))
+        cursor.execute('''
+            SELECT last_price FROM stocks
+            WHERE counter = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        ''', (counter,))
         result = cursor.fetchone()
         conn.close()
 
@@ -180,8 +194,8 @@ def get_fundamentals(counter):
 
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
-        div_yield = (company['dividend'] / price) * 100 if price else None
-        roe = (company['net_profit'] / company['equity']) * 100 if company['equity'] else None
+        div_yield = (dividend / price) * 100 if price else None
+        roe = (net_profit / equity) * 100 if equity else None
 
         return jsonify({
             "eps": f"{eps:.2f}",
