@@ -1,12 +1,14 @@
-#StockMate Flask App 
+#StockMate 
 
 from flask import Flask, jsonify, request, send_file
-import os, json, sqlite3, requests, fitz, re
+import os, json, sqlite3, requests, pytz, fitz, re
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 from bs4 import BeautifulSoup
 from fpdf import FPDF
+from datetime import datetime
 
+# ========== FLASK APP ==========
 app = Flask(__name__)
 
 # ========== DATABASE INIT ==========
