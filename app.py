@@ -275,7 +275,7 @@ def stock_metrics(counter):
 class PDF(FPDF):
     def header(self):
         # Logo
-        self.image("stockmate-logo.png", 10, 8, 30)  # (x, y, width)
+        self.image("StockMate-logo.png", 10, 8, 30)  # (x, y, width)
         self.set_xy(50, 10)
         self.set_fill_color(0, 102, 204)  # Blue header background
         self.set_text_color(255, 255, 255)
