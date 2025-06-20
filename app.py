@@ -125,6 +125,34 @@ def price_history(counter):
         {"timestamp": row[0], "price": row[1]} for row in reversed(rows)
     ])
 
+@app.route('/history/<counter>', methods=['GET'])
+def get_price_history(counter):
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT DATE(timestamp), last_price
+            FROM stocks
+            WHERE counter = ?
+            ORDER BY timestamp ASC
+        ''', (counter,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        # Clean and format results
+        history = []
+        for row in rows:
+            date_str = row[0]
+            try:
+                price = float(str(row[1]).replace(',', ''))
+                history.append({"date": date_str, "price": price})
+            except:
+                continue
+
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
     import json
@@ -166,33 +194,68 @@ def get_fundamentals(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/history/<counter>', methods=['GET'])
-def get_price_history(counter):
+@app.route('/metrics/<counter>', methods=['GET'])
+def stock_metrics(counter):
     try:
+        with open('fundamentals.json') as f:
+            data = json.load(f)
+
+        company = data.get(counter.upper())
+        if not company:
+            return jsonify({"error": "Fundamentals not found"}), 404
+
+        # Parse and clean numbers
+        try:
+            net_profit = float(str(company['net_profit']).replace(',', ''))
+            equity = float(str(company['equity']).replace(',', ''))
+            shares = float(str(company['shares_outstanding']).replace(',', ''))
+            dividend = float(str(company['dividend_paid']).replace(',', ''))
+        except Exception as e:
+            return jsonify({"error": f"Parsing error: {str(e)}"}), 500
+
+        eps = net_profit / shares if shares else 0
+        bvps = equity / shares if shares else 0
+
+        # Fetch latest stock data
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT DATE(timestamp), last_price
+            SELECT last_price, change, volume, turnover, timestamp
             FROM stocks
             WHERE counter = ?
-            ORDER BY timestamp ASC
+            ORDER BY timestamp DESC
+            LIMIT 1
         ''', (counter,))
-        rows = cursor.fetchall()
+        row = cursor.fetchone()
         conn.close()
 
-        # Clean and format results
-        history = []
-        for row in rows:
-            date_str = row[0]
-            try:
-                price = float(str(row[1]).replace(',', ''))
-                history.append({"date": date_str, "price": price})
-            except:
-                continue
+        if not row:
+            return jsonify({"error": "Price data not found"}), 404
 
-        return jsonify(history)
+        price_str = str(row[0]).replace(',', '')
+        price = float(price_str) if price_str else 0
+
+        pe = price / eps if eps else None
+        pb = price / bvps if bvps else None
+        div_yield = (dividend / price) * 100 if price else None
+        roe = (net_profit / equity) * 100 if equity else None
+
+        return jsonify({
+            "counter": counter.upper(),
+            "last_price": f"{price:.2f}",
+            "change": row[1],
+            "volume": row[2],
+            "turnover": row[3],
+            "timestamp": row[4],
+            "eps": f"{eps:.2f}",
+            "pe_ratio": f"{pe:.2f}" if pe else "N/A",
+            "pb_ratio": f"{pb:.2f}" if pb else "N/A",
+            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A",
+            "roe": f"{roe:.2f}%" if roe else "N/A"
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
       
 # ========== PDF DOWNLOAD ==========
 @app.route('/download_sample_reports/<company>', methods=['GET'])
