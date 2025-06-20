@@ -360,17 +360,24 @@ def fundamentals_report(counter):
         pdf.ln(10)
         # ========== Company Logo + Name ==========
         logo_path = f"company_logos/{counter.upper()}.png"
+        logo_width = 25
+        
         if os.path.exists(logo_path):
-            pdf.image(logo_path, x=10, y=pdf.get_y(), w=25)  # You can adjust x/y/w
-            pdf.set_xy(40, pdf.get_y() + 5)  # Adjust position to align text with logo
+            y_start = pdf.get_y()
+            pdf.image(logo_path, x=10, y=y_start, w=logo_width)
+            pdf.set_xy(10 + logo_width + 10, y_start + 5) 
+            pdf.set_font("DejaVu", 'B', 16)
+            pdf.cell(0, 10, f"{counter} SNAPSHOT", ln=True)
+            # Push cursor down so logo and text above don't overlap with content
+            pdf.set_y(y_start + logo_width + 5)
         else:
-            pdf.set_x(10)
-    
-        pdf.set_font("DejaVu", "B", 16)
-        pdf.set_text_color(0)
-        pdf.cell(0, 10, f"{counter.upper()} SNAPSHOT", ln=True)
-        pdf.ln(3)
+            pdf.set_font("DejaVu", "B", 16)
+            pdf.set_text_color(0)
+            pdf.cell(0, 10, f"{counter.upper()} SNAPSHOT", ln=True)
+            pdf.ln(10)
 
+        # ==== Financial Info ====
+        pdf.set_text_color(0)
         pdf.set_font("DejaVu", "", 12)
         pdf.cell(0, 10, f"Net Profit: MK {net_profit:,.2f}", ln=True)
         pdf.cell(0, 10, f"Equity: MK {equity:,.2f}", ln=True)
@@ -389,15 +396,15 @@ def fundamentals_report(counter):
         pdf.cell(0, 10, f"Dividend Yield: {div_yield:.2f}%" if div_yield else "N/A", ln=True)
         pdf.cell(0, 10, f"Return on Equity (ROE): {roe:.2f}%" if roe else "N/A", ln=True)
 
-        pdf.ln(15)
+        pdf.ln(20)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
         pdf.multi_cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange.\nAccuracy is not guaranteed.\nInvest wisely.")
 
-        file_path = f"{counter.upper()}-Fundamentals.pdf"
-        pdf.output(file_path)
+        filename = f"{counter.upper()}-Fundamentals-Report.pdf"
+        pdf.output(filename)
 
-        return send_file(file_path, as_attachment=True)
+        return send_file(filename, as_attachment=True)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
