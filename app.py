@@ -356,7 +356,7 @@ def fundamentals_report(counter):
         pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
         pdf.add_font("DejaVu", "B", "fonts/DejaVuSans.ttf", uni=True)
         pdf.add_font("DejaVu", "I", "fonts/DejaVuSans.ttf", uni=True)
-        pdf.add_font("DejaVu", "U", "fonts/DejaVuSans.ttf", uni=True)
+        pdf.add_font("DejaVu", "BI", "fonts/DejaVuSans.ttf", uni=True)
         
         pdf.add_page()
         pdf.ln(10)
@@ -436,7 +436,7 @@ def fundamentals_report(counter):
         # Add clickable URL under QR
         pdf.set_xy(130, 278)  # Adjust X and Y position for link text
         pdf.set_text_color(0, 0, 255)  # Blue link color
-        pdf.set_font("DejaVu", "U", 10)  # Underlined font
+        pdf.set_font("DejaVu", "", 10)  # Underlined font
         pdf.cell(70, 10, "Visit:", ln=1, align='C', link=qr_url)
         
         os.remove(qr_path)
