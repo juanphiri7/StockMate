@@ -298,7 +298,7 @@ class PDF(FPDF):
         self.ln(15)
         # Motto
         self.set_text_color(75, 0, 130)
-        self.set_font("DejaVu", "I", 10)
+        self.set_font("DejaVu", "BI", 10)
         self.set_xy(50, 20)
         self.cell(140, 8, "Smart Insights. Wise Investments.", ln=True, align='C')
         self.ln(10)
