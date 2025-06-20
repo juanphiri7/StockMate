@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: stockmate-api
+    name: StockMate
     runtime: python
     buildCommand: ""
     startCommand: gunicorn app.py:app
