@@ -11,6 +11,17 @@ from datetime import datetime
 # ========== FLASK APP ==========
 app = Flask(__name__)
 
+# ========== TIMEZONE CONVERTER ==========
+def convert_to_local(utc_time_str):
+    try:
+        utc = pytz.utc
+        local = pytz.timezone('Africa/Blantyre')  # GMT+2
+        utc_dt = datetime.strptime(utc_time_str, '%Y-%m-%d %H:%M:%S')
+        local_dt = utc.localize(utc_dt).astimezone(local)
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
+    except:
+        return utc_time_str 
+        
 # ========== DATABASE INIT ==========
 def init_db():
     conn = sqlite3.connect('database.db')
