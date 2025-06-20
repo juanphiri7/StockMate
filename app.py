@@ -298,19 +298,16 @@ class PDF(FPDF):
         self.ln(15)
         # Motto
         self.set_text_color(75, 0, 130)
-        self.set_font("DejaVu", "BI", 10)
+        self.set_font("DejaVu", "I", 10)
         self.set_xy(50, 20)
         self.cell(140, 8, "Smart Insights. Wise Investments.", ln=True, align='C')
         self.ln(10)
     
     def footer(self):
-        self.set_y(-20)
+        self.set_y(-15)
         self.set_font("DejaVu", "", 10)
-        # Set blue text color
-        self.set_text_color(0, 0, 255)  # RGB for blue
-        # Phone link (clickable)
-        self.cell(0, 6, "Call/WhatsApp: +265888695513", ln=True, align='C', link='tel:+265888695513')
-        # Email link (clickable)
+        self.set_text_color(0, 0, 255)
+        self.cell(0, 6, "Call/WhatsApp: +265888695513", ln=True, align='C', link='https://wa.me/265888695513')
         self.cell(0, 6, "Email: juanphiri7@gmail.com", ln=True, align='C', link='mailto:juanphiri7@gmail.com')
 
 @app.route('/fundamentals_report/<counter>', methods=['GET'])
@@ -404,7 +401,7 @@ def fundamentals_report(counter):
         pdf.ln(20)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
-        pdf.multi_cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange.\nAccuracy is not guaranteed.\nInvest wisely.")
+        pdf.multi_cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange.\nAccuracy is not guaranteed. Invest wisely.")
 
         filename = f"{counter.upper()}-Fundamentals-Report.pdf"
        
@@ -436,12 +433,6 @@ def fundamentals_report(counter):
         # Insert QR into PDF
         pdf.image(qr_path, x=160, y=245, w=30, h=30)
 
-        # Add clickable URL under QR
-        pdf.set_xy(130, 278)  # Adjust X and Y position for link text
-        pdf.set_text_color(0, 0, 255)  # Blue link color
-        pdf.set_font("DejaVu", "", 10)  # Underlined font
-        pdf.cell(70, 10, "Visit:qr_url", ln=1, align='C', link=qr_url)
-        
         os.remove(qr_path)
         pdf.output(filename)
 
