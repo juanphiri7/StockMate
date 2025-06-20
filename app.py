@@ -12,7 +12,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # ========== TIMEZONE CONVERTER ==========
-def convert_to_local(utc_time_str):
+def convert_to_local_time(utc_time_str):
     try:
         utc = pytz.utc
         local = pytz.timezone('Africa/Blantyre')  # GMT+2
@@ -106,7 +106,7 @@ def get_stocks():
     cursor.execute('SELECT counter, last_price, change, volume, turnover, timestamp FROM stocks ORDER BY timestamp DESC LIMIT 20')
     rows = cursor.fetchall()
     conn.close()
-    return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": r[5]} for r in rows])
+    return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])} for r in rows])
 
 @app.route('/latest_prices', methods=['GET'])
 def latest_prices():
@@ -120,7 +120,7 @@ def latest_prices():
     rows = cursor.fetchall()
     conn.close()
     
-    return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": r[5]} for r in rows])
+    return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])} for r in rows])
 
 @app.route('/price_history/<counter>', methods=['GET'])
 def price_history(counter):
@@ -137,7 +137,7 @@ def price_history(counter):
     conn.close()
     
     return jsonify([
-        {"timestamp": row[0], "price": row[1]} for row in reversed(rows)
+        {"timestamp": convert_to_local_time(row[0]), "price": row[1]} for row in reversed(rows)
     ])
 
 @app.route('/history/<counter>', methods=['GET'])
@@ -275,7 +275,7 @@ def stock_metrics(counter):
             "change": row[1],
             "volume": row[2],
             "turnover": row[3],
-            "timestamp": row[4],
+            "timestamp": convert_to_local_time(row[4]),
             "eps": f"{eps:.2f}",
             "pe_ratio": f"{pe:.2f}" if pe else "N/A",
             "pb_ratio": f"{pb:.2f}" if pb else "N/A",
