@@ -119,17 +119,7 @@ def latest_prices():
     ''')
     rows = cursor.fetchall()
     conn.close()
-    # Convert to GMT+2
-    utc = pytz.utc
-    gmt_plus_2 = pytz.timezone('Africa/Blantyre')
-
-    def local_time(utc_time_str):
-        try:
-            utc_time = datetime.strptime(utc_time_str, '%Y-%m-%d %H:%M:%S')
-            local_dt = utc.localize(utc_time).astimezone(gmt_plus_2)
-            return local_dt.strftime('%Y-%m-%d %H:%M:%S')
-        except:
-            return utc_time_str
+    
     return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": r[5]} for r in rows])
 
 @app.route('/price_history/<counter>', methods=['GET'])
@@ -145,17 +135,7 @@ def price_history(counter):
     ''', (counter,))
     rows = cursor.fetchall()
     conn.close()
-    # Convert to GMT+2
-    utc = pytz.utc
-    gmt_plus_2 = pytz.timezone('Africa/Blantyre')
-
-    def local_time(utc_time_str):
-        try:
-            utc_time = datetime.strptime(utc_time_str, '%Y-%m-%d %H:%M:%S')
-            local_dt = utc.localize(utc_time).astimezone(gmt_plus_2)
-            return local_dt.strftime('%Y-%m-%d %H:%M:%S')
-        except:
-            return utc_time_str
+    
     return jsonify([
         {"timestamp": row[0], "price": row[1]} for row in reversed(rows)
     ])
