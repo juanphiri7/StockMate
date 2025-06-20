@@ -5,3 +5,4 @@ apscheduler
 PyMuPDF
 gunicorn
 fpdf
+fpdf==1.7.2
