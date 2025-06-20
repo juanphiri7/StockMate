@@ -354,9 +354,9 @@ def fundamentals_report(counter):
         pdf = PDF()
         
         pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
-        pdf.add_font("DejaVu", "B", "fonts/DejaVuSans.ttf", uni=True)
-        pdf.add_font("DejaVu", "I", "fonts/DejaVuSans.ttf", uni=True)
-        pdf.add_font("DejaVu", "BI", "fonts/DejaVuSans.ttf", uni=True)
+        pdf.add_font("DejaVu", "B", "fonts/DejaVuSans-Bold.ttf", uni=True)
+        pdf.add_font("DejaVu", "I", "fonts/DejaVuSans-Oblique.ttf", uni=True)
+        pdf.add_font("DejaVu", "BI", "fonts/DejaVuSans-BoldOblique.ttf", uni=True)
         
         pdf.add_page()
         pdf.ln(10)
@@ -368,7 +368,7 @@ def fundamentals_report(counter):
             y_start = pdf.get_y()
             pdf.image(logo_path, x=10, y=y_start, w=logo_width)
             pdf.set_xy(10 + logo_width + 10, y_start + 5) 
-            pdf.set_font("DejaVu", 'B', 16)
+            pdf.set_font("DejaVu", "B", 16)
             pdf.cell(0, 10, f"{counter} SNAPSHOT", ln=True)
             # Push cursor down so logo and text above don't overlap with content
             pdf.set_y(y_start + logo_width + 5)
