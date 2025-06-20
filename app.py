@@ -282,7 +282,7 @@ class PDF(FPDF):
         self.cell(140, 10, 'StockMate Fundamentals Report', ln=True, align='C', fill=True)
         self.ln(15)
         # Motto
-        self.set_text_color(60, 60, 60)
+        self.set_text_color(75, 0, 130)
         self.set_font("DejaVu", "I", 10)
         self.set_xy(50, 20)
         self.cell(140, 8, "Smart Insights. Wise Investments.", ln=True, align='C')
