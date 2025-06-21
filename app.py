@@ -408,14 +408,14 @@ def fundamentals_report(counter):
         pdf.cell(0, 10, f"Book Value Per Share (BVPS): {bvps:.2f}" if bvps else "N/A", ln=True)
         pdf.cell(0, 10, f"Return on Equity (ROE): {roe:.2f}%" if roe else "N/A", ln=True)
 
-        pdf.ln(15)
+        pdf.ln(12)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
-        pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange website.\nAccuracy is NOT guaranteed. Verify with official data for {counter.upper()} by Scanning the QR Code. Invest wisely.")
+        pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange.\nAccuracy is NOT guaranteed. Verify with official data for {counter.upper()} by Scanning the QR Code. Invest wisely.")
         pdf.ln(7)
         pdf.set_font("DejaVu", "B", 10)
         pdf.set_text_color(0)
-        pdf.cell(0, 10, f"For more information about {counter.upper()}, Scan the QR Code below.")
+        pdf.cell(0, 10, f"For more information about {counter.upper()}, Scan the QR Code.")
         
         filename = f"{counter.upper()}-Fundamentals-Report.pdf"
        
