@@ -449,9 +449,20 @@ def fundamentals_report(counter):
 def download_sample_reports(company):
     company = company.upper()
     pdf_links = {
-        "NICO": "https://mse.co.mw/wp-content/uploads/2024/04/NICO-Annual-Report-2023.pdf",
-        "FMBCH": "https://mse.co.mw/wp-content/uploads/2024/04/FMBCH-FY23.pdf",
-        "STAND": "https://mse.co.mw/wp-content/uploads/2024/04/STAND-FY23-Financials.pdf"
+        "AIRTEL": "https://mse.co.mw/company/MWAIRT001156",
+        "BHL": "https://mse.co.mw/company/MWBHL001164",
+        "FDH": "https://mse.co.mw/company/MWFDHB001178",
+        "FMBCH": "https://mse.co.mw/company/MWFMBCH00009",
+        "ICON": "https://mse.co.mw/company/MWICON001188",            "ILLOVO": "https://mse.co.mw/company/MWILLV001116",
+        "MPICO": "https://mse.co.mw/company/MWMPICO010010",
+        "NBS": "https://mse.co.mw/company/MWNBS001174",
+        "NBM": "https://mse.co.mw/company/MWNBM001113",
+        "NICO": "https://mse.co.mw/company/MWNICO010014",
+        "NITL": "https://mse.co.mw/company/MWNITL001117",
+        "OMU": "https://mse.co.mw/company/MWOMU001121",            "PCL": "https://mse.co.mw/company/MWPCL001111",
+        "STANDARD": "https://mse.co.mw/company/MWSB0001112",
+        "SUNBIRD": "https://mse.co.mw/company/MWSUN001119",
+        "TNM": "https://mse.co.mw/company/MWTNM001151"
     }
 
     if company not in pdf_links:
