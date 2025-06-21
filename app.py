@@ -237,7 +237,6 @@ def stock_metrics(counter):
         # Parse and clean numbers
         try:
             net_profit = float(str(company['net_profit']).replace(',', ''))
-            equity = float(str(company['equity']).replace(',', ''))
             shares = float(str(company['shares_outstanding']).replace(',', ''))
             dividend = float(str(company['dividend_paid']).replace(',', ''))
             book_value = float(str(company['book_value']).replace(',', ''))
