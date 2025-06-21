@@ -213,14 +213,12 @@ def get_fundamentals(counter):
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
         div_yield = (dvps / price) * 100 if price else None
-        roe = (net_profit / equity) * 100 if equity else None
-
+        
         return jsonify({
             "eps": f"{eps:.2f}",
             "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
             "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
-            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A",
-            "roe": f"{roe:.2f}%" if roe else "N/A"
+            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A"
         })
 
     except Exception as e:
