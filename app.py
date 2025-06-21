@@ -90,14 +90,14 @@ def save_data(stock_data):
 # ========== API ROUTES ==========
 @app.route('/')
 def home():
-    return "StockMate API is running!"
+    return "Hello There! StockMate API is Running!"
 
 @app.route('/scrape', methods=['GET'])
 def scrape_and_save():
     data = scrape_mse()
     if data:
         save_data(data)
-        return jsonify({"message": "Data scraped and saved", "count": len(data)})
+        return jsonify({"message": "Success!! Data Scraped and Saved", "count": len(data)})
     else:
         return jsonify({"error": "Failed to scrape data"}), 500
 
