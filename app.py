@@ -337,7 +337,7 @@ def fundamentals_report(counter):
         bvps = book_value / shares if shares and book_value else 0
         dvps = dividend / shares if shares and dividend else 0
 
-        # Get current price
+        # Get latest stock price
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('''
@@ -355,7 +355,7 @@ def fundamentals_report(counter):
 
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
-        div_yield = (dividend / price) * 100 if price else None
+        div_yield = (dvps / price) * 100 if price else None
         roe = (net_profit / equity) * 100 if equity else None
 
         # === Create PDF ===
