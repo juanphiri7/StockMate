@@ -398,14 +398,14 @@ def fundamentals_report(counter):
         pdf.cell(0, 10, f"Dividend Yield: {div_yield:.2f}%" if div_yield else "N/A", ln=True)
         pdf.cell(0, 10, f"Return on Equity (ROE): {roe:.2f}%" if roe else "N/A", ln=True)
 
-        pdf.ln(20)
+        pdf.ln(30)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
         pdf.cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange, hence accuracy is NOT guaranteed. Invest wisely.")
-        pdf.ln(1)
+        pdf.ln(4)
         pdf.set_font("DejaVu", "B", 10)
-        pdf.set_text_color(90)
-        pdf.cell(0, 10, f"For more information about {counter}, Scan the QR Code below.")
+        pdf.set_text_color(0)
+        pdf.cell(0, 10, f"For more information about {counter.upper()}, Scan the QR Code below.")
         
         filename = f"{counter.upper()}-Fundamentals-Report.pdf"
        
