@@ -279,6 +279,7 @@ def stock_metrics(counter):
             "turnover": result[3],
             "timestamp": convert_to_local_time(result[4]),
             "eps": f"{eps:.2f}",
+            "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
             "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
             "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A"
         })
