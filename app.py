@@ -548,10 +548,10 @@ def debug_pdf_text(company):
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
-        if request.form['password'] == "stockmateadmin":
+        if request.form['password'] == "Kimberly@47":
             session['logged_in'] = True
             return redirect(url_for('admin_dashboard'))
-        return "Incorrect password", 403
+        return "Incorrect Password", 403
 
     return render_template_string("""
         <h2>StockMate Admin Login</h2>
@@ -613,7 +613,7 @@ def edit_company(company):
             <button type="submit">Save</button>
         </form>
         <a href="/admin/dashboard">← Back to dashboard</a>
-        """)
+    """)
     
 # ========== SCHEDULER ==========
 def scheduled_scrape():
