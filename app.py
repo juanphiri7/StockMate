@@ -247,7 +247,7 @@ def stock_metrics(counter):
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
         eps = net_profit / shares if shares else 0
-        bvps = book_value / shares if shares else 0
+        bvps = book_value / shares if shares and book_value else 0
 
         # Fetch latest stock data
         conn = sqlite3.connect('database.db')
@@ -259,17 +259,17 @@ def stock_metrics(counter):
             ORDER BY timestamp DESC
             LIMIT 1
         ''', (counter,))
-        row = cursor.fetchone()
+        result = cursor.fetchone()
         conn.close()
 
-        if not row:
-            return jsonify({"error": "Price data not found"}), 404
+        if not result:
+            return jsonify({"error": "Latest Price data not found"}), 404
 
-        price_str = str(row[0]).replace(',', '')
+        price_str = str(result[0]).replace(',', '')
         price = float(price_str) if price_str else 0
 
-        pe = price / eps if eps else None
-        pb = price / bvps if bvps else None
+        pe_ratio = price / eps if eps else None
+        pb_ratio = price / bvps if bvps else None
         div_yield = (dividend / price) * 100 if price else None
         roe = (net_profit / equity) * 100 if equity else None
 
