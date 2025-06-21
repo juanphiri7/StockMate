@@ -604,7 +604,7 @@ def edit_company(company):
             "net_profit": request.form['net_profit'],
             "number_of_shares_in_issue": request.form['number_of_shares_in_issue'],
             "dividend_paid": request.form['dividend_paid'],
-            "book_value": request.form['']
+            "book_value": request.form['book_value']
         }
         with open('fundamentals.json', 'w') as f:
             json.dump(data, f, indent=2)
