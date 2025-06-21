@@ -321,7 +321,7 @@ def fundamentals_report(counter):
             return jsonify({"error": "Data not available for this company"}), 404
 
         # Parse numeric data
-        net_profit = float(str(company['net_profit']).replace(',', '')
+        net_profit = float(str(company['net_profit']).replace(',', ''))
         shares = float(str(company['number_of_shares_in_issue']).replace(',', ''))
         dividend = float(str(company['dividend_paid']).replace(',', ''))
         book_value = float(str(company.get('book_value', 0)).replace(',', ''))
