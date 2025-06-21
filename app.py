@@ -565,7 +565,7 @@ def admin_login():
     return render_template_string("""
         <h2>StockMate Admin Login</h2>
         <form method="POST">
-            <input type="password" name="password" placeholder="Put the Key Here"/>
+            <input type="password" name="password" placeholder="Insert the Key Here"/>
             <button type="submit">Unlock the Vault</button>
         </form>
     """)
