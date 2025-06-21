@@ -331,9 +331,11 @@ def fundamentals_report(counter):
         equity = float(str(company['equity']).replace(',', ''))
         shares = float(str(company['shares_outstanding']).replace(',', ''))
         dividend = float(str(company['dividend_paid']).replace(',', ''))
+        book_value = float(str(company['book_value']).replace(',', ''))
 
-        eps = net_profit / shares if shares else 0
-        bvps = equity / shares if shares else 0
+        eps = net_profit / shares if shares and net_profit else 0
+        bvps = book_value / shares if shares and book_value else 0
+        dvps = dividend / shares if shares and dividend else 0
 
         # Get current price
         conn = sqlite3.connect('database.db')
