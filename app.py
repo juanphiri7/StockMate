@@ -2,12 +2,12 @@
 
 # ========== Imports ==========
 import os, json, sqlite3, requests, pytz, fitz, re, atexit, qrcode
-from flask import Flask, jsonify, request, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 from fpdf import FPDF
 from datetime import datetime
 from PIL import Image
+from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file
 
 # ========== FLASK APP ==========
 app = Flask(__name__)
@@ -549,11 +549,6 @@ def scheduled_scrape():
 
 # =============== ❌ ADMIN PANEL ❌ ===============
 
-from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file
-import os, json, sqlite3, requests
-from apscheduler.schedulers.background import BackgroundScheduler
-import atexit
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 app.secret_key = "your-super-secret-key"  # Required for sessions
