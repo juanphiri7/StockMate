@@ -242,11 +242,12 @@ def stock_metrics(counter):
             equity = float(str(company['equity']).replace(',', ''))
             shares = float(str(company['shares_outstanding']).replace(',', ''))
             dividend = float(str(company['dividend_paid']).replace(',', ''))
+            book_value = float(str(company['book_value']).replace(',', ''))
         except Exception as e:
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
         eps = net_profit / shares if shares else 0
-        bvps = equity / shares if shares else 0
+        bvps = book_value / shares if shares else 0
 
         # Fetch latest stock data
         conn = sqlite3.connect('database.db')
