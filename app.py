@@ -411,7 +411,7 @@ def fundamentals_report(counter):
         pdf.ln(15)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
-        pdf.multi_cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange.\nAccuracy is NOT guaranteed. Invest wisely.")
+        pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange website.\nAccuracy is NOT guaranteed. Verify with official data for {counter.upper()} by Scanning the QR Code. Invest wisely.")
         pdf.ln(7)
         pdf.set_font("DejaVu", "B", 10)
         pdf.set_text_color(0)
