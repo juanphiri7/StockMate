@@ -560,7 +560,7 @@ def admin_login():
         if request.form['password'] == "StockMateAdmin@47":
             session['logged_in'] = True
             return redirect(url_for('admin_dashboard'))
-        return "Oops\! That Key Doesn't Fit the Lock\!", 403
+        return r"Oops!! That Key Doesn't Fit the Lock!", 403
 
     return render_template_string("""
         <h2>StockMate Admin Login</h2>
