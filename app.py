@@ -603,13 +603,14 @@ def edit_company(company):
         data[company] = {
             "net_profit": request.form['net_profit'],
             "number_of_shares_in_issue": request.form['number_of_shares_in_issue'],
-            "dividend_paid": request.form['dividend_paid']
+            "dividend_paid": request.form['dividend_paid'],
+            "book_value": request.form['']
         }
         with open('fundamentals.json', 'w') as f:
             json.dump(data, f, indent=2)
         return redirect(url_for('admin_dashboard'))
 
-    values = data.get(company, {"net_profit":"", "number_of_shares_in_issue":"", "dividend_paid":""})
+    values = data.get(company, {"net_profit":"", "number_of_shares_in_issue":"", "dividend_paid":"", "book_value":""})
 
     return render_template_string(f"""
         <h2>Edit Fundamentals for {company}</h2>
