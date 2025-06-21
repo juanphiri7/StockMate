@@ -331,7 +331,7 @@ def fundamentals_report(counter):
         equity = float(str(company['equity']).replace(',', ''))
         shares = float(str(company['shares_outstanding']).replace(',', ''))
         dividend = float(str(company['dividend_paid']).replace(',', ''))
-        book_value = float(str(company['book_value']).replace(',', ''))
+        book_value = float(str(company.get('book_value', 0)).replace(',', ''))
 
         eps = net_profit / shares if shares and net_profit else 0
         bvps = book_value / shares if shares and book_value else 0
