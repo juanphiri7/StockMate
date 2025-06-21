@@ -560,12 +560,12 @@ def admin_login():
         if request.form['password'] == "StockMateAdmin@47":
             session['logged_in'] = True
             return redirect(url_for('admin_dashboard'))
-        return "Incorrect Password", 403
+        return "Oops!! That Key doesn't fit the lock!"", 403
 
     return render_template_string("""
         <h2>StockMate Admin Login</h2>
         <form method="POST">
-            <input type="password" name="password" placeholder="Enter password"/>
+            <input type="password" name="password" placeholder="Put the Key Here"/>
             <button type="submit">Login</button>
         </form>
     """)
