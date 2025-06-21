@@ -377,13 +377,13 @@ def fundamentals_report(counter):
             pdf.image(logo_path, x=10, y=y_start, w=logo_width)
             pdf.set_xy(10 + logo_width + 10, y_start + 5) 
             pdf.set_font("DejaVu", "B", 16)
-            pdf.cell(0, 10, f"{counter} SNAPSHOT", ln=True)
+            pdf.cell(0, 10, f"{counter} Snapshot", ln=True)
             # Push cursor down so logo and text above don't overlap with content
             pdf.set_y(y_start + logo_width + 5)
         else:
             pdf.set_font("DejaVu", "B", 16)
             pdf.set_text_color(0)
-            pdf.cell(0, 10, f"{counter.upper()} SNAPSHOT", ln=True)
+            pdf.cell(0, 10, f"{counter.upper()} Snapshot", ln=True)
             pdf.ln(10)
 
         # ==== Financial Info ====
@@ -411,7 +411,7 @@ def fundamentals_report(counter):
         pdf.ln(12)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
-        pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange.\nAccuracy is NOT guaranteed. Verify with official data for {counter.upper()} by Scanning the QR Code. Invest wisely.")
+        pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange.\nAccuracy is NOT guaranteed. Scan the QR Code to verify {counter.upper()} official data. Invest wisely.")
         pdf.ln(7)
         pdf.set_font("DejaVu", "B", 10)
         pdf.set_text_color(0)
