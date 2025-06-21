@@ -401,8 +401,12 @@ def fundamentals_report(counter):
         pdf.ln(20)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
-        pdf.multi_cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange.\nAccuracy is not guaranteed. Invest wisely.")
-
+        pdf.cell(0, 10, "This report was generated based on public financial data collected from the Malawi Stock Exchange, hence accuracy is NOT guaranteed. Invest wisely.")
+        pdf.ln(1)
+        pdf.set_font("DejaVu", "B", 10)
+        pdf.set_text_color(90)
+        pdf.cell(0, 10, f"For more information about {counter}, Scan the QR Code below.")
+        
         filename = f"{counter.upper()}-Fundamentals-Report.pdf"
        
         # === Generate QR Code for MSE companies ===
