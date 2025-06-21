@@ -389,21 +389,23 @@ def fundamentals_report(counter):
         # ==== Financial Info ====
         pdf.set_text_color(0)
         pdf.set_font("DejaVu", "", 12)
-        pdf.cell(0, 10, f"Net Profit: MK {net_profit:,.2f}", ln=True)
-        pdf.cell(0, 10, f"Equity: MK {equity:,.2f}", ln=True)
-        pdf.cell(0, 10, f"Shares Outstanding: {shares:,.0f}", ln=True)
-        pdf.cell(0, 10, f"Dividend Paid: MK {dividend:,.2f}", ln=True)
-        pdf.cell(0, 10, f"Latest Price: MK {price:,.2f}", ln=True)
-
+        pdf.cell(0, 10, f"Latest Price: MK {price:,.2f}" if price else "N/A", ln=True)
+        pdf.cell(0, 10, f"Net Profit: MK {net_profit:,.2f}" if net_profit else "N/A", ln=True)
+        pdf.cell(0, 10, f"Dividend Paid: MK {dividend:,.2f}" if dividend else "N/A", ln=True)
+        pdf.cell(0, 10, f"Shares Outstanding: {shares:,.0f}" if shares else "N/A", ln=True)
+        pdf.cell(0, 10, f"Equity: MK {equity:,.2f}" if equity else "N/A", ln=True)
+        pdf.cell(0, 10, f"Book Value: MK {book_value:,.2f}" if book_value else "N/A", ln=True)
+        # Metrics 
         pdf.ln(5)
         pdf.set_font("DejaVu", "B", 16)
         pdf.cell(0, 10, "Key Financial Metrics", ln=True)
 
         pdf.set_font("DejaVu", "", 12)
-        pdf.cell(0, 10, f"Earnings Per Share (EPS): {eps:.2f}", ln=True)
+        pdf.cell(0, 10, f"Earnings Per Share (EPS): {eps:.2f}" if eps else "N/A", ln=True)
         pdf.cell(0, 10, f"P/E Ratio: {pe_ratio:.2f}" if pe_ratio else "N/A", ln=True)
-        pdf.cell(0, 10, f"P/B Ratio: {pb_ratio:.2f}" if pb_ratio else "N/A", ln=True)
         pdf.cell(0, 10, f"Dividend Yield: {div_yield:.2f}%" if div_yield else "N/A", ln=True)
+        pdf.cell(0, 10, f"P/B Ratio: {pb_ratio:.2f}" if pb_ratio else "N/A", ln=True)
+        pdf.cell(0, 10, f"Book Value Per Share (BVPS): {bvps:.2f}" if bvps else "N/A", ln=True)
         pdf.cell(0, 10, f"Return on Equity (ROE): {roe:.2f}%" if roe else "N/A", ln=True)
 
         pdf.ln(15)
