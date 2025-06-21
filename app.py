@@ -602,23 +602,22 @@ def edit_company(company):
     if request.method == 'POST':
         data[company] = {
             "net_profit": request.form['net_profit'],
-            "equity": request.form['equity'],
-            "shares_outstanding": request.form['shares_outstanding'],
+            "number_of_shares_in_issue": request.form['number_of_shares_in_issue'],
             "dividend_paid": request.form['dividend_paid']
         }
         with open('fundamentals.json', 'w') as f:
             json.dump(data, f, indent=2)
         return redirect(url_for('admin_dashboard'))
 
-    values = data.get(company, {"net_profit":"", "equity":"", "shares_outstanding":"", "dividend_paid":""})
+    values = data.get(company, {"net_profit":"", "number_of_shares_in_issue":"", "dividend_paid":""})
 
     return render_template_string(f"""
         <h2>Edit Fundamentals for {company}</h2>
         <form method="POST">
-            Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>
-            Equity: <input name="equity" value="{values['equity']}"/><br>
-            Shares Outstanding: <input name="shares_outstanding" value="{values['shares_outstanding']}"/><br>
+            Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>            
+            Number of Shares Issued: <input name="number_of_shares_in_issue" value="{values['number_of_shares_in_issue']}"/><br>
             Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>
+            Book Value: <input name="book_value" value="{values['book_value']}"/><br>
             <button type="submit">Save</button>
         </form>
         <a href="/admin/dashboard">← Back to dashboard</a>
@@ -635,7 +634,7 @@ def scheduled_scrape():
 if __name__ == '__main__':
     init_db()
     scheduler = BackgroundScheduler()
-    scheduler.add_job(scheduled_scrape, trigger='interval', minutes=10)
+    scheduler.add_job(scheduled_scrape, trigger='interval', minutes=5)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown(wait=False))
     app.run(host='0.0.0.0', port=5000, debug=True)
