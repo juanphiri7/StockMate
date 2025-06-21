@@ -511,16 +511,14 @@ def extract_fundamentals(company):
         full_text += page.get_text()
 
     profit = re.search(r'Net\s+Profit\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
-    equity = re.search(r'Total\s+Equity\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
-    shares = re.search(r'Shares\s+.*?Outstanding\s*[:\-]?\s*([\d,]+)', full_text, re.IGNORECASE)
+    shares = re.search(r'Number\s+of\s+Shares\s+in\s+Issue\s*[:\-]?\s*([\d,]+)', full_text, re.IGNORECASE)
     dividend = re.search(r'Dividend\s+(?:Paid|Declared)?\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
     book_value = re.search(r'Book\s+Value\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
 
     data = {
         "company": company,
         "net_profit": profit.group(1) if profit else "Not found",
-        "equity": equity.group(1) if equity else "Not found",
-        "shares_outstanding": shares.group(1) if shares else "Not found",
+        "number_of_shares_in_issue": shares.group(1) if shares else "Not found",
         "dividend_paid": dividend.group(1) if dividend else "Not found",
         "book_value": book_value.group(1) if book_value else "Not found"
     }
