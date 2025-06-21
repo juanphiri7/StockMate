@@ -548,7 +548,7 @@ def debug_pdf_text(company):
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
-        if request.form['password'] == "Kimberly@47":
+        if request.form['password'] == "StockMateAdmin@47":
             session['logged_in'] = True
             return redirect(url_for('admin_dashboard'))
         return "Incorrect Password", 403
