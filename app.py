@@ -566,7 +566,7 @@ def admin_login():
         <h2>StockMate Admin Login</h2>
         <form method="POST">
             <input type="password" name="password" placeholder="Put the Key Here"/>
-            <button type="submit">Login</button>
+            <button type="submit">Unlock the Vault</button>
         </form>
     """)
 
