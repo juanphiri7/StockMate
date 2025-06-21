@@ -183,7 +183,7 @@ def get_fundamentals(counter):
         # Parse and clean numerical values
         try:
             net_profit = float(str(company['net_profit']).replace(',', ''))
-            shares = float(str(company['shares_outstanding']).replace(',', ''))
+            shares = float(str(company['number_of_shares_in_issue']).replace(',', ''))
             dividend = float(str(company['dividend_paid']).replace(',', ''))
             book_value = float(str(company['book_value']).replace(',', ''))
         except Exception as e:
@@ -237,7 +237,7 @@ def stock_metrics(counter):
         # Parse and clean numbers
         try:
             net_profit = float(str(company['net_profit']).replace(',', ''))
-            shares = float(str(company['shares_outstanding']).replace(',', ''))
+            shares = float(str(company['number_of_shares_in_issue']).replace(',', ''))
             dividend = float(str(company['dividend_paid']).replace(',', ''))
             book_value = float(str(company['book_value']).replace(',', ''))
         except Exception as e:
@@ -270,7 +270,6 @@ def stock_metrics(counter):
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
         div_yield = (dvps / price) * 100 if price else None
-        roe = (net_profit / equity) * 100 if equity else None
 
         return jsonify({
             "counter": counter.upper(),
@@ -280,10 +279,8 @@ def stock_metrics(counter):
             "turnover": result[3],
             "timestamp": convert_to_local_time(result[4]),
             "eps": f"{eps:.2f}",
-            "pe_ratio": f"{pe:.2f}" if pe else "N/A",
-            "pb_ratio": f"{pb:.2f}" if pb else "N/A",
-            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A",
-            "roe": f"{roe:.2f}%" if roe else "N/A"
+            "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
+            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
