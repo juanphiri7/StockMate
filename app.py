@@ -312,7 +312,7 @@ class PDF(FPDF):
     def footer(self):
         self.set_y(-15)
         self.set_font("DejaVu", "", 10)
-        self.set_text_color(0, 0, 255)
+        self.set_text_color(0, 0, 238)
         self.cell(0, 6, "Call/WhatsApp: +265888695513", ln=True, align='C', link='https://wa.me/265888695513')
         self.cell(0, 6, "Email: juanphiri7@gmail.com", ln=True, align='C', link='mailto:juanphiri7@gmail.com')
 
