@@ -186,11 +186,12 @@ def get_fundamentals(counter):
             equity = float(str(company['equity']).replace(',', ''))
             shares = float(str(company['shares_outstanding']).replace(',', ''))
             dividend = float(str(company['dividend_paid']).replace(',', ''))
+            book_value = float(str(company['book_value']).replace(',', ''))
         except Exception as e:
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
         eps = net_profit / shares if shares else 0
-        bvps = equity / shares if shares else 0
+        bvps = book_value / shares if shares else 0
 
         # Fetch latest price
         conn = sqlite3.connect('database.db')
@@ -505,13 +506,15 @@ def extract_fundamentals(company):
     equity = re.search(r'Total\s+Equity\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
     shares = re.search(r'Shares\s+.*?Outstanding\s*[:\-]?\s*([\d,]+)', full_text, re.IGNORECASE)
     dividend = re.search(r'Dividend\s+(?:Paid|Declared)?\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
+    book_value = re.search(r'Book\s+Value\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
 
     data = {
         "company": company,
         "net_profit": profit.group(1) if profit else "Not found",
         "equity": equity.group(1) if equity else "Not found",
         "shares_outstanding": shares.group(1) if shares else "Not found",
-        "dividend_paid": dividend.group(1) if dividend else "Not found"
+        "dividend_paid": dividend.group(1) if dividend else "Not found",
+        "book_value": book_value.group(1) if book_value else "Not found"
     }
 
     os.makedirs("data", exist_ok=True)
