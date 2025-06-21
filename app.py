@@ -434,7 +434,7 @@ def fundamentals_report(counter):
         qr_img.save(qr_path)
 
         # Insert QR into PDF
-        pdf.image(qr_path, x=160, y=237, w=40, h=40)
+        pdf.image(qr_path, x=160, y=240, w=40, h=40)
 
         os.remove(qr_path)
         pdf.output(filename)
