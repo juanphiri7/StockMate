@@ -2,16 +2,14 @@
   "NICO": {
     "company": "NICO",
     "net_profit": "72,006,217,688.65",
-    "equity": "276,466,000",
-    "shares_outstanding": "1,043,041,096",
+    "number_of_shares_in_issue": "1,043,041,096",
     "dividend_paid": "10,430,410,960",
     "book_value": "155,726,035,632.8"
   },
   "AIRTEL": {
     "company": "AIRTEL",
     "net_profit": "48,768,200,000",
-    "equity": "313,800,500,000",
-    "shares_outstanding": "7,973,397,724",
+    "number_of_shares_in_issue": "7,973,397,724",
     "dividend_paid": "7,300,400,000",
     "book_value": "223,050,070,000"
   }
