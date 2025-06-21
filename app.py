@@ -190,8 +190,9 @@ def get_fundamentals(counter):
         except Exception as e:
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
-        eps = net_profit / shares if shares else 0
-        bvps = book_value / shares if shares else 0
+        eps = net_profit / shares if shares and net_profit else 0
+        bvps = book_value / shares if shares and book_value else 0
+        dvps = dividend / shares if shares and dividend else 0
 
         # Fetch latest price
         conn = sqlite3.connect('database.db')
@@ -212,7 +213,7 @@ def get_fundamentals(counter):
 
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
-        div_yield = (dividend / price) * 100 if price else None
+        div_yield = (dvps / price) * 100 if price else None
         roe = (net_profit / equity) * 100 if equity else None
 
         return jsonify({
@@ -246,9 +247,10 @@ def stock_metrics(counter):
         except Exception as e:
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
-        eps = net_profit / shares if shares else 0
+        eps = net_profit / shares if shares and net_profit else 0
         bvps = book_value / shares if shares and book_value else 0
-
+        dvps = dividend / shares if shares and dividend else 0
+        
         # Fetch latest stock data
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
@@ -268,9 +270,10 @@ def stock_metrics(counter):
         price_str = str(result[0]).replace(',', '')
         price = float(price_str) if price_str else 0
 
+        
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
-        div_yield = (dividend / price) * 100 if price else None
+        div_yield = (dvps / price) * 100 if price else None
         roe = (net_profit / equity) * 100 if equity else None
 
         return jsonify({
