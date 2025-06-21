@@ -546,6 +546,253 @@ def scheduled_scrape():
     if data:
         save_data(data)
 
+
+# =============== ❌ ADMIN PANEL ❌ ===============
+
+from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file
+import os, json, sqlite3, requests
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
+from bs4 import BeautifulSoup
+
+app = Flask(__name__)
+app.secret_key = "your-super-secret-key"  # Required for sessions
+
+# ========= DATABASE =========
+def init_db():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS stocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            counter TEXT,
+            last_price TEXT,
+            change TEXT,
+            volume TEXT,
+            turnover TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# ========= SCRAPER =========
+def scrape_mse():
+    url = 'https://www.mse.co.mw/'
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        table = soup.find('table')
+        data = []
+        if not table:
+            return []
+        rows = table.find_all('tr')
+        for row in rows[1:]:
+            cols = row.find_all('td')
+            if len(cols) >= 5:
+                data.append({
+                    'Counter': cols[0].text.strip(),
+                    'Last Price (MK)': cols[1].text.strip(),
+                    '% Change': cols[2].text.strip(),
+                    'Volume': cols[3].text.strip(),
+                    'Turnover (MK)': cols[4].text.strip()
+                })
+        return data
+    except Exception as e:
+        print("Scraping Error:", e)
+        return []
+
+# ========= SAVE SCRAPED =========
+def save_data(stock_data):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    for item in stock_data:
+        c.execute('''
+            SELECT 1 FROM stocks
+            WHERE counter = ? AND last_price = ? AND change = ? AND volume = ? AND turnover = ?
+            AND timestamp >= datetime('now', '-1 hour')
+        ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+        if not c.fetchone():
+            c.execute('''
+                INSERT INTO stocks (counter, last_price, change, volume, turnover)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+    conn.commit()
+    conn.close()
+
+# ========= ROUTES =========
+@app.route('/')
+def home():
+    return "StockMate API is running!"
+
+@app.route('/scrape', methods=['GET'])
+def scrape_and_save():
+    data = scrape_mse()
+    if data:
+        save_data(data)
+        return jsonify({"message": "Data scraped and saved", "count": len(data)})
+    else:
+        return jsonify({"error": "Failed to scrape data"}), 500
+
+@app.route('/latest_prices', methods=['GET'])
+def latest_prices():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT counter, last_price, change, volume, turnover, MAX(timestamp)
+        FROM stocks
+        GROUP BY counter
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": r[5]} for r in rows])
+
+@app.route('/price_history/<counter>', methods=['GET'])
+def price_history(counter):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT timestamp, last_price
+        FROM stocks
+        WHERE counter = ?
+        ORDER BY timestamp DESC
+        LIMIT 10
+    ''', (counter,))
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([
+        {"timestamp": row[0], "price": row[1]} for row in reversed(rows)
+    ])
+
+@app.route('/fundamentals/<counter>', methods=['GET'])
+def get_fundamentals(counter):
+    try:
+        with open('fundamentals.json') as f:
+            data = json.load(f)
+
+        company = data.get(counter.upper())
+        if not company:
+            return jsonify({"error": "Data not available for this company"}), 404
+
+        eps = float(company['net_profit'].replace(',', '')) / float(company['shares_outstanding'].replace(',', ''))
+        bvps = float(company['equity'].replace(',', '')) / float(company['shares_outstanding'].replace(',', ''))
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT last_price FROM stocks WHERE counter = ? ORDER BY timestamp DESC LIMIT 1', (counter,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            price = float(str(result[0]).replace(',', ''))
+        else:
+            return jsonify({"error": "Price data not available"}), 404
+
+        pe_ratio = price / eps if eps else None
+        pb_ratio = price / bvps if bvps else None
+        div_yield = (float(company['dividend_paid'].replace(',', '')) / price) * 100 if price else None
+        roe = (float(company['net_profit'].replace(',', '')) / float(company['equity'].replace(',', ''))) * 100 if company['equity'] else None
+
+        return jsonify({
+            "eps": f"{eps:.2f}",
+            "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
+            "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
+            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A",
+            "roe": f"{roe:.2f}%" if roe else "N/A"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ========= ADMIN PANEL =========
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        if request.form['password'] == "stockmateadmin":
+            session['logged_in'] = True
+            return redirect(url_for('admin_dashboard'))
+        return "Incorrect password", 403
+
+    return render_template_string("""
+        <h2>StockMate Admin Login</h2>
+        <form method="POST">
+            <input type="password" name="password" placeholder="Enter password"/>
+            <button type="submit">Login</button>
+        </form>
+    """)
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if not session.get('logged_in'):
+        return redirect(url_for('admin_login'))
+
+    try:
+        with open('fundamentals.json') as f:
+            data = json.load(f)
+    except:
+        data = {}
+
+    html = "<h2>Company Fundamentals</h2><ul>"
+    for k in sorted(data.keys()):
+        html += f"<li><strong>{k}</strong> — <a href='/admin/edit/{k}'>Edit</a></li>"
+    html += "</ul>"
+    return html
+
+@app.route('/admin/edit/<company>', methods=['GET', 'POST'])
+def edit_company(company):
+    if not session.get('logged_in'):
+        return redirect(url_for('admin_login'))
+
+    company = company.upper()
+    try:
+        with open('fundamentals.json') as f:
+            data = json.load(f)
+    except:
+        data = {}
+
+    if request.method == 'POST':
+        data[company] = {
+            "net_profit": request.form['net_profit'],
+            "equity": request.form['equity'],
+            "shares_outstanding": request.form['shares_outstanding'],
+            "dividend_paid": request.form['dividend_paid']
+        }
+        with open('fundamentals.json', 'w') as f:
+            json.dump(data, f, indent=2)
+        return redirect(url_for('admin_dashboard'))
+
+    values = data.get(company, {"net_profit":"", "equity":"", "shares_outstanding":"", "dividend_paid":""})
+
+    return render_template_string(f"""
+        <h2>Edit Fundamentals for {company}</h2>
+        <form method="POST">
+            Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>
+            Equity: <input name="equity" value="{values['equity']}"/><br>
+            Shares Outstanding: <input name="shares_outstanding" value="{values['shares_outstanding']}"/><br>
+            Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>
+            <button type="submit">Save</button>
+        </form>
+        <a href="/admin/dashboard">← Back to dashboard</a>
+    """)
+
+# ========= SCHEDULER =========
+def scheduled_scrape():
+    print("Scheduled scrape running...")
+    data = scrape_mse()
+    if data:
+        save_data(data)
+
+# ========= INIT =========
+if __name__ == '__main__':
+    init_db()
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(scheduled_scrape, trigger='interval', minutes=10)
+    scheduler.start()
+    atexit.register(lambda: scheduler.shutdown(wait=False))
+    app.run(host='0.0.0.0', port=5000, debug=True)
+
 # ========== INIT ==========
 if __name__ == '__main__':
     init_db()
