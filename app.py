@@ -288,7 +288,18 @@ def debug_fundamentals_schema():
     cursor.execute("PRAGMA table_info(fundamentals)")
     columns = cursor.fetchall()
     conn.close()
-    return jsonify([{"id": col[0], "name": col[1], "type": col[2]} for col in columns])
+
+    schema = []
+    for col in columns:
+        schema.append({
+            "cid" : col[0],
+            "name" : col[1],
+            "type" : col[2],
+            "notnull" : col[3],
+            "default_value" : col[4],
+            "primary_key" : col[5]
+        })
+    return jsonify(schema)
 
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
