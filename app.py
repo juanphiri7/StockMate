@@ -213,38 +213,39 @@ def seed_fundamentals():
             "book_value": "223,050,070,000"
         },
         {
-            "counter": "ICON",           "net_profit": "48,768,200,000",
+            "counter": "ICON",           
+            "net_profit": "48,768,200,000",
             "number_of_shares_in_issue": "7,973,397,724",
             "dividend_paid": "7,300,400,000",
             "book_value": "223,050,070,000"
-  },
-  "ILLOVO": {
-    "company": "ILLOVO",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "MPICO": {
-    "company": "MPICO",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "NBM": {
-    "company": "NBM",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "NBS": {
-    "company": "NBS",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "ILLOVO",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "MPICO",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "NBM",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "NBS",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
   },
   "NICO": {
     "company": "NICO",
