@@ -280,7 +280,6 @@ def seed_fundamentals():
     conn.close()
     return jsonify({"message": "Seed data inserted for NICO"})
 
-
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
     counter = counter.upper()
