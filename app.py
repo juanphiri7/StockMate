@@ -183,13 +183,14 @@ def get_price_history(counter):
 
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
+    counter = counter.upper()
     try:
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('''
             SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
             FROM fundamentals WHERE counter = ?
-        ''', (counter.upper(),))
+        ''', (counter,))
         row = cursor.fetchone()
         conn.close()
 
@@ -244,13 +245,14 @@ def get_fundamentals(counter):
 
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
+    counter = counter.upper()
     try:
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('''
             SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
             FROM fundamentals WHERE counter = ?
-        ''', (counter.upper(),))
+        ''', (counter,))
         row = cursor.fetchone()
         conn.close()
 
@@ -268,6 +270,7 @@ def stock_metrics(counter):
         except Exception as e:
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
+        # Calculate Metrics 
         eps = net_profit / shares if shares and net_profit else 0
         bvps = book_value / shares if shares and book_value else 0
         dvps = dividend / shares if shares and dividend else 0
@@ -336,13 +339,14 @@ class PDF(FPDF):
 
 @app.route('/fundamentals_report/<counter>', methods=['GET'])
 def fundamentals_report(counter):
+    counter = counter.upper()
     try:
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('''
             SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
             FROM fundamentals WHERE counter = ?
-        ''', (counter.upper(),))
+        ''', (counter,))
         row = cursor.fetchone()
         conn.close()
 
@@ -357,6 +361,7 @@ def fundamentals_report(counter):
         dividend = float(str(company['dividend_paid']).replace(',', ''))
         book_value = float(str(company.get('book_value', 0)).replace(',', ''))
 
+        #Calculate Metrics
         eps = net_profit / shares if shares and net_profit else 0
         bvps = book_value / shares if shares and book_value else 0
         dvps = dividend / shares if shares and dividend else 0
@@ -546,20 +551,37 @@ def extract_fundamentals(company):
     dividend = re.search(r'Dividend\s+(?:Paid|Declared)?\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
     book_value = re.search(r'Book\s+Value\s*[:\-]?\s*[MK]*\s?([\d,]+\.\d+)', full_text, re.IGNORECASE)
 
-    data = {
+    try:
+        net_profit = float(profit.group(1).replace(',', '')) if profit else None
+        shares_out = float(shares.group(1).replace(',', '')) if shares else None
+        dividend_paid = float(dividend.group(1).replace(',', '')) if dividend else None
+        book_val = float(book_value.group(1).replace(',', '')) if book_value else None
+    except:
+        return jsonify({"error": "Failed to parse numeric values properly"}), 500
+
+    # Insert into database
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO fundamentals
+        (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (company, net_profit, shares_out, dividend_paid, book_val))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
         "company": company,
-        "net_profit": profit.group(1) if profit else "Not found",
-        "number_of_shares_in_issue": shares.group(1) if shares else "Not found",
-        "dividend_paid": dividend.group(1) if dividend else "Not found",
-        "book_value": book_value.group(1) if book_value else "Not found"
-    }
-
-    os.makedirs("data", exist_ok=True)
-    with open("data/fundamentals.json", "w") as f:
-        json.dump({company: data}, f, indent=2)
-
-    return jsonify(data)
-
+        "net_profit": net_profit if net_profit is not None else "Not found",
+        "equity": total_equity if total_equity is not None else "Not found",
+        "shares_outstanding": shares_out if shares_out is not None else "Not found",
+        "dividend_paid": dividend_paid if dividend_paid is not None else "Not found",
+        "book_value": book_val if book_val is not None else "Not found"
+    })
+    
+    
+    
+  
 # ========== DEBUG TEXT ROUTE ==========
 @app.route('/debug_pdf_text/<company>', methods=['GET'])
 def debug_pdf_text(company):
@@ -581,8 +603,7 @@ def debug_pdf_text(company):
         return jsonify({"error": str(e)}), 500
 
 
-
-# =============== ❌ ADMIN PANEL ❌ ===============
+# =============== ❌❌❌ ADMIN PANEL ❌❌❌ ===============
 
 
 @app.route('/admin', methods=['GET', 'POST'])
