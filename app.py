@@ -243,6 +243,15 @@ def get_fundamentals(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/debug_fundamentals', methods=['GET'])
+def debug_fundamentals():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT counter FROM fundamentals")
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([row[0] for row in rows])
+
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
     counter = counter.upper()
