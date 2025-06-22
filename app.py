@@ -245,13 +245,20 @@ def get_fundamentals(counter):
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
     try:
-        with open('fundamentals.json') as f:
-            data = json.load(f)
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+            FROM fundamentals WHERE counter = ?
+        ''', (counter.upper(),))
+        row = cursor.fetchone()
+        conn.close()
 
-        company = data.get(counter.upper())
-        if not company:
-            return jsonify({"error": "Fundamentals not found"}), 404
+        if not row:
+            return jsonify({"error": "Data not available for this company"}), 404
 
+        net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
+        
         # Parse and clean numbers
         try:
             net_profit = float(str(company['net_profit']).replace(',', ''))
@@ -283,7 +290,6 @@ def stock_metrics(counter):
 
         price_str = str(result[0]).replace(',', '')
         price = float(price_str) if price_str else 0
-
         
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
@@ -331,13 +337,20 @@ class PDF(FPDF):
 @app.route('/fundamentals_report/<counter>', methods=['GET'])
 def fundamentals_report(counter):
     try:
-        with open('fundamentals.json') as f:
-            data = json.load(f)
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+            FROM fundamentals WHERE counter = ?
+        ''', (counter.upper(),))
+        row = cursor.fetchone()
+        conn.close()
 
-        company = data.get(counter.upper())
-        if not company:
+        if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
+        net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
+  
         # Parse numeric data
         net_profit = float(str(company['net_profit']).replace(',', ''))
         shares = float(str(company['number_of_shares_in_issue']).replace(',', ''))
