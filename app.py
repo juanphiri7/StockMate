@@ -298,6 +298,24 @@ def seed_fundamentals():
         }
     ]
 
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    for entry in fundamentals_data:
+        cursor.execute('''
+            INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            entry['counter'],
+            entry['net_profit'],
+            entry['number_of_shares_in_issue'],
+            entry['dividend_paid'],
+            entry['book_value']
+        ))
+
+    conn.commit()
+    conn.close()
+
 
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
