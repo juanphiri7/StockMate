@@ -39,6 +39,7 @@ def init_db():
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
     # Fundamentals table (NEW)
     c.execute('''
         CREATE TABLE IF NOT EXISTS fundamentals (
@@ -243,6 +244,8 @@ def get_fundamentals(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
+
 @app.route('/debug_fundamentals', methods=['GET'])
 def debug_fundamentals():
     conn = sqlite3.connect('database.db')
@@ -251,6 +254,32 @@ def debug_fundamentals():
     rows = cursor.fetchall()
     conn.close()
     return jsonify([row[0] for row in rows])
+
+# ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
+
+@app.route('/debug_tables')
+def debug_tables():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = cursor.fetchall()
+    conn.close()
+    return jsonify([t[0] for t in tables])
+
+# ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
+
+@app.route('/seed_fundamentals')
+def seed_fundamentals():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('''
+        INSERT OR REPLACE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+        VALUES (?, ?, ?, ?, ?)
+    ''', ('NICO', 2000000000, 400000000, 500000000, 7500000000))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Seed data inserted for NICO"})
+
 
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
