@@ -270,15 +270,18 @@ def debug_tables():
 
 @app.route('/seed_fundamentals')
 def seed_fundamentals():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('''
-        INSERT OR REPLACE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-        VALUES (?, ?, ?, ?, ?)
-    ''', ('NICO', 2000000000, 400000000, 500000000, 7500000000))
-    conn.commit()
-    conn.close()
-    return jsonify({"message": "Seed data inserted for NICO"})
+    try:
+        conn = sqlite3.connect('database.db')
+        c = conn.cursor()
+        c.execute('''
+            INSERT OR REPLACE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+            VALUES (?, ?, ?, ?, ?)
+        ''', ('NICO', 2000000000, 400000000, 500000000, 7500000000))
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Seed data inserted for NICO"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
