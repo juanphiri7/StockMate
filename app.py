@@ -201,10 +201,10 @@ def get_fundamentals(counter):
         
         # Parse and clean numerical values
         try:
-            net_profit = float(str(company['net_profit']).replace(',', ''))
-            shares = float(str(company['number_of_shares_in_issue']).replace(',', ''))
-            dividend = float(str(company['dividend_paid']).replace(',', ''))
-            book_value = float(str(company['book_value']).replace(',', ''))
+            net_profit = float(str(row['net_profit']).replace(',', ''))
+            shares = float(str(row['number_of_shares_in_issue']).replace(',', ''))
+            dividend = float(str(row['dividend_paid']).replace(',', ''))
+            book_value = float(str(row['book_value']).replace(',', ''))
         except Exception as e:
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
@@ -263,10 +263,10 @@ def stock_metrics(counter):
         
         # Parse and clean numbers
         try:
-            net_profit = float(str(company['net_profit']).replace(',', ''))
-            shares = float(str(company['number_of_shares_in_issue']).replace(',', ''))
-            dividend = float(str(company['dividend_paid']).replace(',', ''))
-            book_value = float(str(company['book_value']).replace(',', ''))
+            net_profit = float(str(row['net_profit']).replace(',', ''))
+            shares = float(str(row['number_of_shares_in_issue']).replace(',', ''))
+            dividend = float(str(row['dividend_paid']).replace(',', ''))
+            book_value = float(str(row['book_value']).replace(',', ''))
         except Exception as e:
             return jsonify({"error": f"Parsing error: {str(e)}"}), 500
 
@@ -356,10 +356,10 @@ def fundamentals_report(counter):
         net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
   
         # Parse numeric data
-        net_profit = float(str(company['net_profit']).replace(',', ''))
-        shares = float(str(company['number_of_shares_in_issue']).replace(',', ''))
-        dividend = float(str(company['dividend_paid']).replace(',', ''))
-        book_value = float(str(company.get('book_value', 0)).replace(',', ''))
+        net_profit = float(str(row['net_profit']).replace(',', ''))
+        shares = float(str(row['number_of_shares_in_issue']).replace(',', ''))
+        dividend = float(str(row['dividend_paid']).replace(',', ''))
+        book_value = float(str(row.get('book_value', 0)).replace(',', ''))
 
         #Calculate Metrics
         eps = net_profit / shares if shares and net_profit else 0
