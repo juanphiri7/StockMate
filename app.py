@@ -246,57 +246,56 @@ def seed_fundamentals():
             "number_of_shares_in_issue": "7,973,397,724",
             "dividend_paid": "7,300,400,000",
             "book_value": "223,050,070,000"
-  },
-  "NICO": {
-    "company": "NICO",
-    "net_profit": "72,006,217,688.65",
-    "number_of_shares_in_issue": "1,043,041,096",
-    "dividend_paid": "10,430,410,960",
-    "book_value": "155,726,035,632.8"
-  },
-  "NITL": {
-    "company": "NITL",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "OMU": {
-    "company": "OMU",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "PCL": {
-    "company": "PCL",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "STANDARD": {
-    "company": "STANDARD",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "SUNBIRD": {
-    "company": "SUNBIRD",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  },
-  "TNM": {
-    "company": "TNM",
-    "net_profit": "48,768,200,000",
-    "number_of_shares_in_issue": "7,973,397,724",
-    "dividend_paid": "7,300,400,000",
-    "book_value": "223,050,070,000"
-  }
-}
+        },
+        {
+            "counter": "NICO",
+            "net_profit": "72,006,217,688.65",
+            "number_of_shares_in_issue": "1,043,041,096",
+            "dividend_paid": "10,430,410,960",
+            "book_value": "155,726,035,632.8"
+        },
+        {
+            "counter": "NITL",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "OMU",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "PCL",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "STANDARD",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "SUNBIRD",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "company": "TNM",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        }
     ]
 
 
@@ -859,6 +858,7 @@ def scheduled_scrape():
 # ========== INIT ==========
 if __name__ == '__main__':
     init_db()
+    seed_fundamentals()
     scheduler = BackgroundScheduler()
     scheduler.add_job(scheduled_scrape, trigger='interval', minutes=5)
     scheduler.start()
