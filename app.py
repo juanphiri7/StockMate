@@ -573,14 +573,11 @@ def extract_fundamentals(company):
     return jsonify({
         "company": company,
         "net_profit": net_profit if net_profit is not None else "Not found",
-        "equity": total_equity if total_equity is not None else "Not found",
         "shares_outstanding": shares_out if shares_out is not None else "Not found",
         "dividend_paid": dividend_paid if dividend_paid is not None else "Not found",
         "book_value": book_val if book_val is not None else "Not found"
     })
-    
-    
-    
+        
   
 # ========== DEBUG TEXT ROUTE ==========
 @app.route('/debug_pdf_text/<company>', methods=['GET'])
