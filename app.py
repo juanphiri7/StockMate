@@ -26,7 +26,7 @@ def convert_to_local_time(utc_time_str):
         
 # ========== DATABASE INIT ==========
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database.db') # Use your PostgreSQL engine later
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS stocks (
@@ -37,6 +37,17 @@ def init_db():
             volume TEXT,
             turnover TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    # Fundamentals table (NEW)
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS fundamentals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            counter TEXT UNIQUE,
+            net_profit REAL,           
+            number_of_shares_in_issue INTEGER,
+            dividend_paid REAL,
+            book_value REAL
         )
     ''')
     conn.commit()
@@ -173,13 +184,20 @@ def get_price_history(counter):
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
     try:
-        with open('fundamentals.json') as f:
-            data = json.load(f)
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+            FROM fundamentals WHERE counter = ?
+        ''', (counter.upper(),))
+        row = cursor.fetchone()
+        conn.close()
 
-        company = data.get(counter.upper())
-        if not company:
+        if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
+        net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
+        
         # Parse and clean numerical values
         try:
             net_profit = float(str(company['net_profit']).replace(',', ''))
