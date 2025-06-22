@@ -182,6 +182,123 @@ def get_price_history(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def seed_fundamentals():
+    fundamentals_data = [
+        {
+            "counter": "AIRTEL",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "BHL",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "FDHB",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "FMBCH",
+            "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+        },
+        {
+            "counter": "ICON",           "net_profit": "48,768,200,000",
+            "number_of_shares_in_issue": "7,973,397,724",
+            "dividend_paid": "7,300,400,000",
+            "book_value": "223,050,070,000"
+  },
+  "ILLOVO": {
+    "company": "ILLOVO",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "MPICO": {
+    "company": "MPICO",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "NBM": {
+    "company": "NBM",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "NBS": {
+    "company": "NBS",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "NICO": {
+    "company": "NICO",
+    "net_profit": "72,006,217,688.65",
+    "number_of_shares_in_issue": "1,043,041,096",
+    "dividend_paid": "10,430,410,960",
+    "book_value": "155,726,035,632.8"
+  },
+  "NITL": {
+    "company": "NITL",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "OMU": {
+    "company": "OMU",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "PCL": {
+    "company": "PCL",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "STANDARD": {
+    "company": "STANDARD",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "SUNBIRD": {
+    "company": "SUNBIRD",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  },
+  "TNM": {
+    "company": "TNM",
+    "net_profit": "48,768,200,000",
+    "number_of_shares_in_issue": "7,973,397,724",
+    "dividend_paid": "7,300,400,000",
+    "book_value": "223,050,070,000"
+  }
+}
+    ]
+
+
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
     counter = counter.upper()
