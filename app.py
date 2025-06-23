@@ -40,7 +40,7 @@ def init_db():
         )
     ''')
     
-    # Fundamentals table (NEW)
+    # Fundamentals table
     c.execute('''
         CREATE TABLE IF NOT EXISTS fundamentals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
