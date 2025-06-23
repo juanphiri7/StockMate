@@ -189,7 +189,7 @@ def get_price_history(counter):
         return jsonify({"error": str(e)}), 500
 
 # ==== Fundamentals Data
-def seed_fundamentals():
+def insert_fundamentals():
     fundamentals_data = [
         {
             "counter": "AIRTEL",
@@ -297,7 +297,7 @@ def seed_fundamentals():
             "book_value": "69,889,633,724.40"
         },
         {
-            "company": "TNM",
+            "counter": "TNM",
             "net_profit": "10,060,000,000.00",
             "number_of_shares_in_issue": "11,541,200,375",
             "dividend_paid": "0.00",
@@ -313,13 +313,34 @@ def seed_fundamentals():
             INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
             VALUES (?, ?, ?, ?, ?)
         ''', (
-            entry[0],
-            entry[1],
-            entry[2],
-            entry[3],
-            entry[4]
+            entry["counter"],
+            entry["net_profit"],
+            entry["number_of_shares_in_issue"],
+            entry["dividend_paid"],
+            entry["book_value"]
         ))
 
+    conn.commit()
+    conn.close()
+
+# ======= Insert Fundamentals 
+@app.route('/insert_fundamentals', methods = ['POST'])
+def insert_fundamentals():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+
+    for counter, values in data_dict.items():
+        c.execute('''
+            INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            counter,
+            values['net_profit'],
+            values['number_of_shares_in_issue'],
+            values['dividend_paid'],
+            values['book_value']
+        ))
+    
     conn.commit()
     conn.close()
 
@@ -828,7 +849,6 @@ def scheduled_scrape():
 # ========== INIT ==========
 if __name__ == '__main__':
     init_db()
-    seed_fundamentals()
     scheduler = BackgroundScheduler()
     scheduler.add_job(scheduled_scrape, trigger='interval', minutes=5)
     scheduler.start()
