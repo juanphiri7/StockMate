@@ -189,8 +189,7 @@ def get_price_history(counter):
         return jsonify({"error": str(e)}), 500
 
 # ==== Fundamentals Data
-def insert_fundamentals():
-    fundamentals_data = [
+fundamentals_data = [
         {
             "counter": "AIRTEL",
             "net_profit": "42,714,422,219.62",
