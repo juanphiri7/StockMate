@@ -104,6 +104,8 @@ def save_data(stock_data):
 def home():
     return "Hello There! StockMate API is Running!"
 
+
+# ======= Scrape Route
 @app.route('/scrape', methods=['GET'])
 def scrape_and_save():
     data = scrape_mse()
@@ -113,6 +115,7 @@ def scrape_and_save():
     else:
         return jsonify({"error": "Failed to scrape data"}), 500
 
+# ======= Stocks Route
 @app.route('/stocks', methods=['GET'])
 def get_stocks():
     conn = sqlite3.connect('database.db')
@@ -122,6 +125,7 @@ def get_stocks():
     conn.close()
     return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])} for r in rows])
 
+# ======= Latest Prices Route
 @app.route('/latest_prices', methods=['GET'])
 def latest_prices():
     conn = sqlite3.connect('database.db')
@@ -136,6 +140,7 @@ def latest_prices():
     
     return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])} for r in rows])
 
+# ======= Prices History Route
 @app.route('/price_history/<counter>', methods=['GET'])
 def price_history(counter):
     conn = sqlite3.connect('database.db')
@@ -154,6 +159,7 @@ def price_history(counter):
         {"timestamp": convert_to_local_time(row[0]), "price": row[1]} for row in reversed(rows)
     ])
 
+# ======= History Route
 @app.route('/history/<counter>', methods=['GET'])
 def get_price_history(counter):
     try:
@@ -182,6 +188,7 @@ def get_price_history(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ==== Fundamentals Data
 def seed_fundamentals():
     fundamentals_data = [
         {
@@ -316,7 +323,7 @@ def seed_fundamentals():
     conn.commit()
     conn.close()
 
-
+# ======= Fundamentals Route
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
     counter = counter.upper()
@@ -436,6 +443,7 @@ def debug_fundamentals_schema():
         })
     return jsonify(schema)
 
+# ======= Metrics Route
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
     counter = counter.upper()
@@ -530,6 +538,7 @@ class PDF(FPDF):
         self.cell(0, 6, "Call/WhatsApp: +265888695513", ln=True, align='C', link='https://wa.me/265888695513')
         self.cell(0, 6, "Email: juanphiri7@gmail.com", ln=True, align='C', link='mailto:juanphiri7@gmail.com')
 
+# ======= Fundamentals Report Route
 @app.route('/fundamentals_report/<counter>', methods=['GET'])
 def fundamentals_report(counter):
     counter = counter.upper()
