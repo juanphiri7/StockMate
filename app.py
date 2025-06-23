@@ -313,11 +313,11 @@ def seed_fundamentals():
             INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
             VALUES (?, ?, ?, ?, ?)
         ''', (
-            entry['counter'],
-            entry['net_profit'],
-            entry['number_of_shares_in_issue'],
-            entry['dividend_paid'],
-            entry['book_value']
+            entry[0],
+            entry[1],
+            entry[2],
+            entry[3],
+            entry[4]
         ))
 
     conn.commit()
