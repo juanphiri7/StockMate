@@ -400,15 +400,27 @@ def debug_fundamentals():
 @app.route('/seed_fundamentals')
 def seed_fundamentals():
     try:
+        with open("fundamentals.json") as f:
+            data = json.load(f)
+
         conn = sqlite3.connect('database.db')
         c = conn.cursor()
+        
+        for counter, values in data.items():
         c.execute('''
             INSERT OR REPLACE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
             VALUES (?, ?, ?, ?, ?)
-        ''', ('NICO', 2000000000, 400000000, 500000000, 7500000000))
+        ''', (counter, float(str(values.get('net_profit', 0)).replace(',', '')),
+                int(str(values.get('number_of_shares_in_issue', 0)).replace(',', '')),
+                float(str(values.get('dividend_paid', 0)).replace(',', '')),
+                float(str(values.get('book_value', 0)).replace(',', ''))
+            ))
         conn.commit()
         conn.close()
         return jsonify({"message": "Fundamentals Seeded Successfully"})
+    except Exception as e:
+        print("Seeding error:", e)
+        return jsonify({"error": str(e)}), 500
 
 # ======= Metrics Route
 @app.route('/metrics/<counter>', methods=['GET'])
