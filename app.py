@@ -422,6 +422,7 @@ def seed_fundamentals():
         conn.close()
         return jsonify({"message": "Data Seeded Succefully"})
     except Exception as e:
+        print("Seeding error:", e)
         return jsonify({"error": str(e)}), 500
 
 # ======= Metrics Route
@@ -866,7 +867,7 @@ def scheduled_scrape():
 # ========== INIT ==========
 if __name__ == '__main__':
     init_db()
-    seed_fundamentals()
+    #seed_fundamentals()
     scheduler = BackgroundScheduler()
     scheduler.add_job(scheduled_scrape, trigger='interval', minutes=5)
     scheduler.start()
