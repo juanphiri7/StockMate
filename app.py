@@ -408,15 +408,15 @@ def seed_fundamentals():
 
         for counter, values in data.items():
             c.execute('''
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                counter.upper(),
-                float(str(values.get('net_profit', '0')).replace(',', '')),
-                int(str(values.get('number_of_shares_in_issue', '0')).replace(',', '')),
-                float(str(values.get('dividend_paid', '0')).replace(',', '')),
-                float(str(values.get('book_value', '0')).replace(',', ''))
-            ))
+            INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            counter.upper(),
+            float(str(values.get('net_profit', '0')).replace(',', '')),
+            int(str(values.get('number_of_shares_in_issue', '0')).replace(',', '')),
+            float(str(values.get('dividend_paid', '0')).replace(',', '')),
+            float(str(values.get('book_value', '0')).replace(',', ''))
+        ))
 
         conn.commit()
         conn.close()
