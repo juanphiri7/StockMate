@@ -386,45 +386,6 @@ def get_fundamentals(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
-@app.route('/debug_fundamentals', methods=['GET'])
-def debug_fundamentals():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT counter FROM fundamentals")
-    rows = cursor.fetchall()
-    conn.close()
-    return jsonify([row[0] for row in rows])
-
-# ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
-@app.route('/seed_fundamentals', methods=["GET"])
-def seed_fundamentals():
-    try:
-        with open('fundamentals.json') as f:
-            data = json.load(f)
-
-        conn = sqlite3.connect('database.db')
-        c = conn.cursor()
-
-        for counter, values in data.items():
-            c.execute('''
-            INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            counter.upper(),
-            float(str(values.get('net_profit', '0')).replace(',', '')),
-            int(str(values.get('number_of_shares_in_issue', '0')).replace(',', '')),
-            float(str(values.get('dividend_paid', '0')).replace(',', '')),
-            float(str(values.get('book_value', '0')).replace(',', ''))
-        ))
-
-        conn.commit()
-        conn.close()
-        return jsonify({"message": "Data Seeded Succefully"})
-    except Exception as e:
-        print("Seeding error:", e)
-        return jsonify({"error": str(e)}), 500
-
 # ======= Metrics Route
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
