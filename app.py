@@ -193,8 +193,8 @@ def seed_fundamentals():
     fundamentals_data = [
         {
             "counter": "AIRTEL",
-            "net_profit": "48,768,200,000",
-            "number_of_shares_in_issue": "7,973,397,724",
+            "net_profit": "42,714,422,219.62",
+            "number_of_shares_in_issue": "11,000,000,000",
             "dividend_paid": "7,300,400,000",
             "book_value": "223,050,070,000"
         },
