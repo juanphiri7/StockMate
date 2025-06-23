@@ -196,7 +196,7 @@ def seed_fundamentals():
             "net_profit": "42,714,422,219.62",
             "number_of_shares_in_issue": "11,000,000,000",
             "dividend_paid": "7,300,400,000",
-            "book_value": "223,050,070,000"
+            "book_value": "32,120,000,000.00 "
         },
         {
             "counter": "BHL",
