@@ -397,16 +397,6 @@ def debug_fundamentals():
     return jsonify([row[0] for row in rows])
 
 # ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
-@app.route('/debug_tables')
-def debug_tables():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    tables = cursor.fetchall()
-    conn.close()
-    return jsonify([t[0] for t in tables])
-
-# ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
 @app.route('/seed_fundamentals')
 def seed_fundamentals():
     try:
@@ -418,30 +408,7 @@ def seed_fundamentals():
         ''', ('NICO', 2000000000, 400000000, 500000000, 7500000000))
         conn.commit()
         conn.close()
-        return jsonify({"message": "Seed data inserted for NICO"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
-@app.route('/debug_fundamentals_schema')
-def debug_fundamentals_schema():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA table_info(fundamentals)")
-    columns = cursor.fetchall()
-    conn.close()
-
-    schema = []
-    for col in columns:
-        schema.append({
-            "cid" : col[0],
-            "name" : col[1],
-            "type" : col[2],
-            "notnull" : col[3],
-            "default_value" : col[4],
-            "primary_key" : col[5]
-        })
-    return jsonify(schema)
+        return jsonify({"message": "Fundamentals Seeded Successfully"})
 
 # ======= Metrics Route
 @app.route('/metrics/<counter>', methods=['GET'])
