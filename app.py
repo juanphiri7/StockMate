@@ -397,36 +397,31 @@ def debug_fundamentals():
     return jsonify([row[0] for row in rows])
 
 # ❌❌❌❌❌❌❌❌❌❌❌❌ Delete
-@app.route('/seed_fundamentals', methods = ["POST"])
+@app.route('/seed_fundamentals', methods=["GET"])
 def seed_fundamentals():
     try:
-        with open("fundamentals.json") as f:
+        with open('fundamentals.json') as f:
             data = json.load(f)
 
         conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        
+        c = conn.cursor()
+
         for counter, values in data.items():
-            cursor.execute('''
-                INSERT OR REPLACE INTO fundamentals (
-                    counter, 
-                    net_profit, 
-                    number_of_shares_in_issue, 
-                    dividend_paid, 
-                    book_value
-                ) VALUES (?, ?, ?, ?, ?)
-             ''', (
-                counter, 
-                float(str(values.get('net_profit', 0)).replace(',', '')),
-                int(str(values.get('number_of_shares_in_issue', 0)).replace(',', '')),
-                float(str(values.get('dividend_paid', 0)).replace(',', '')),
-                float(str(values.get('book_value', 0)).replace(',', ''))
+            c.execute('''
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                counter.upper(),
+                float(str(values.get('net_profit', '0')).replace(',', '')),
+                int(str(values.get('number_of_shares_in_issue', '0')).replace(',', '')),
+                float(str(values.get('dividend_paid', '0')).replace(',', '')),
+                float(str(values.get('book_value', '0')).replace(',', ''))
             ))
+
         conn.commit()
         conn.close()
-        return jsonify({"message": "Fundamentals Seeded Successfully"})
+        return jsonify({"message": "Data Seeded Succefully"})
     except Exception as e:
-        print("Seeding error:", e)
         return jsonify({"error": str(e)}), 500
 
 # ======= Metrics Route
