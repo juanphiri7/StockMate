@@ -9,3 +9,4 @@ pytz
 qrcode
 Pillow
 python-dotenv
+requests-cache
