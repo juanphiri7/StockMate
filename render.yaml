@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: stockmate
+    env: python
+    plan: free
+    envVars:
+      - key: DATABASE_PATH
+        value: /app/database.db
+      - key: FLASK_SECRET_KEY
+        value: your-secure-random-key-1234567890
+      - key: ADMIN_PASSWORD
+        value: StockMateAdmin@47
