@@ -596,7 +596,7 @@ def fundamentals_report(counter):
         company_urls = {
             "AIRTEL": "https://mse.co.mw/company/MWAIRT001156",
             "BHL": "https://mse.co.mw/company/MWBHL001164",
-            "FDH": "https://mse.co.mw/company/MWFDHB001178",
+            "FDHB": "https://mse.co.mw/company/MWFDHB001178",
             "FMBCH": "https://mse.co.mw/company/MWFMBCH00009",
             "ICON": "https://mse.co.mw/company/MWICON001188",
             "ILLOVO": "https://mse.co.mw/company/MWILLV001116",
@@ -637,7 +637,7 @@ def download_sample_reports(company):
     pdf_links = {
         "AIRTEL": "https://mse.co.mw/company/MWAIRT001156",
         "BHL": "https://mse.co.mw/company/MWBHL001164",
-        "FDH": "https://mse.co.mw/company/MWFDHB001178",
+        "FDHB": "https://mse.co.mw/company/MWFDHB001178",
         "FMBCH": "https://mse.co.mw/company/MWFMBCH00009",
         "ICON": "https://mse.co.mw/company/MWICON001188",            "ILLOVO": "https://mse.co.mw/company/MWILLV001116",
         "MPICO": "https://mse.co.mw/company/MWMPICO010010",
