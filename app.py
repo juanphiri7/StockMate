@@ -191,118 +191,120 @@ def get_price_history(counter):
 # ==== Fundamentals Data
 fundamentals_data = [
         {
-            "counter": "AIRTEL",
+  "AIRTEL": {
+    "counter": "AIRTEL",
             "net_profit": "42,714,422,219.62",
             "number_of_shares_in_issue": "11,000,000,000",
             "dividend_paid": "21,875,568,000.00",
             "book_value": "32,120,000,000.00"
-        },
-        {
-            "counter": "BHL",
+  },
+  "BHL": {
+    "counter": "BHL",
             "net_profit": "-1,369,168,339.45",
             "number_of_shares_in_issue": "5,878,254,935",
             "dividend_paid": "0.00",
             "book_value": "65,131,064,679.80"
-        },
-        {
-            "counter": "FDHB",
+  },
+  "FDHB": {
+    "counter": "FDHB",
             "net_profit": "74,055,922,113.91",
             "number_of_shares_in_issue": "6,901,031,250",
             "dividend_paid": "32,720,549,568.75",
             "book_value": "97,373,550,937.50"
-        },
-        {
-            "counter": "FMBCH",
+  },
+  "FMBCH": {
+    "counter": "FMBCH",
             "net_profit": "118,254,740,000.00",
             "number_of_shares_in_issue": "2,458,250,000",
             "dividend_paid": "8,850,053,988.00",
             "book_value": "329,085,927,500.00"
-        },
-        {
-            "counter": "ICON",           
+  },
+  "ICON": {
+    "counter": "ICON",           
             "net_profit": "24,490,000.00",
             "number_of_shares_in_issue": "6,680,000,000",
             "dividend_paid": "1,942,477,200.00",
             "book_value": "146,225,200,000.00"
-        },
-        {
-            "counter": "ILLOVO",
+  },
+  "ILLOVO": {
+    "counter": "ILLOVO",
             "net_profit": "22,631,873,664.47",
             "number_of_shares_in_issue": "713,444,391",
             "dividend_paid": "3,578,500,083.93",
             "book_value": "148,781,693,299.14"
-        },
-        {
-            "counter": "MPICO",
+  },
+  "MPICO": {
+    "counter": "MPICO",
             "net_profit": "8,535,675,173.68",
             "number_of_shares_in_issue": "2,298,047,460",
             "dividend_paid": "987,300,938.05",
             "book_value": "65,195,606,440.20"
-        },
-        {
-            "counter": "NBM",
+  },
+  "NBM": {
+    "counter": "NBM",
             "net_profit": "102,283,000,000.00",
             "number_of_shares_in_issue": "466,931,738",
             "dividend_paid": "59,060,764,860.77",
             "book_value": "268,560,458,428.08"
-        },
-        {
-            "counter": "NBS",
+  },
+  "NBS": {
+    "counter": "NBS",
             "net_profit": "72,978,138,905.20",
             "number_of_shares_in_issue": "2,910,573,356",
             "dividend_paid": "63,647,021,073.80",
             "book_value": "112,057,074,206.00"
-        },
-        {
-            "counter": "NICO",
+  },
+  "NICO": {
+    "counter": "NICO",
             "net_profit": "72,006,217,688.65",
             "number_of_shares_in_issue": "1,043,041,096",
             "dividend_paid": "22,981,533,076.39",
             "book_value": "155,726,035,632.8"
-        },
-        {
-            "counter": "NITL",
+  },
+  "NITL": {
+    "counter": "NITL",
             "net_profit": "29,759,480,000.00",
             "number_of_shares_in_issue": "135,000,000",
             "dividend_paid": "1,715,933,700.00",
             "book_value": "73,803,150,000.00"
-        },
-        {
-            "counter": "OMU",
+  },
+  "OMU": {
+    "counter": "OMU",
             "net_profit": "2,595,650,000.00",
             "number_of_shares_in_issue": "16,977,551",
             "dividend_paid": "1,404,909,203.96",
             "book_value": "19,469,855,486.80"
-        },
-        {
-            "counter": "PCL",
+  },
+  "PCL": {
+    "counter": "PCL",
             "net_profit": "64,673,000,000.00",
             "number_of_shares_in_issue": "120,255,820",
             "dividend_paid": "1,346,858,449.67",
             "book_value": "348,566,304,502.80"
-        },
-        {
-            "counter": "STANDARD",
+  },
+  "STANDARD": {
+    "counter": "STANDARD",
             "net_profit": "86,365,000,000.00",
             "number_of_shares_in_issue": "234,668,162",
             "dividend_paid": "43,881,111,188.97",
             "book_value": "259,843,362,419.36"
-        },
-        {
-            "counter": "SUNBIRD",
+  },
+  "SUNBIRD": {
+    "counter": "SUNBIRD",
             "net_profit": "10,624,630,000.00",
             "number_of_shares_in_issue": "261,582,580",
             "dividend_paid": "3,396,746,848.44",
             "book_value": "69,889,633,724.40"
-        },
-        {
-            "counter": "TNM",
+  },
+  "TNM": {
+    "counter": "TNM",
             "net_profit": "10,060,000,000.00",
             "number_of_shares_in_issue": "11,541,200,375",
             "dividend_paid": "0.00",
             "book_value": "51,819,989,685.90"
-        }
-    ]
+  }
+}
+]
 conn = sqlite3.connect('database.db')
 cursor = conn.cursor()
 
