@@ -1,13 +1,26 @@
 #StockMate by Juan
 
 # ========== Imports ==========
-import os, json, sqlite3, requests, pytz, fitz, re, atexit, qrcode
+
+import os
+import re
+import json
+import pytz
+import fitz
+import atexit
+import signal
+import qrcode
+import sqlite3
+import requests
+import tempfile
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 from fpdf import FPDF
 from datetime import datetime
 from PIL import Image
 from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file
+from contextlib import contextmanager
+
 
 # ========== FLASK APP ==========
 app = Flask(__name__)
