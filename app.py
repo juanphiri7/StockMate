@@ -12,6 +12,7 @@ import qrcode
 import sqlite3
 import requests
 import tempfile
+import requests_cache
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 from fpdf import FPDF
@@ -214,6 +215,7 @@ def initialize_fundamentals():
 
 
 # ========== SCRAPE ==========
+requests_cache.install_cache('mse_cache', expire_after=300)
 def scrape_mse():
     url = 'https://www.mse.co.mw/'
     headers = {'User-Agent': 'Mozilla/5.0'}
