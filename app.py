@@ -16,6 +16,7 @@ import requests_cache
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 from fpdf import FPDF
+from dotenv import load_dotenv
 from datetime import datetime
 from PIL import Image
 from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file
