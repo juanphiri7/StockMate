@@ -628,9 +628,7 @@ def fundamentals_report(counter):
             return response
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-       
+     
                 
 # ========== FINANCIAL REPORTS PDF DOWNLOAD ==========
 @app.route('/download_sample_reports/<company>', methods=['GET'])
@@ -667,7 +665,6 @@ def download_sample_reports(company):
         response.raise_for_status()
         with open(path, 'wb') as f:
             f.write(response.content)
-
         if os.path.getsize(path) < 1000:
             os.remove(path)
             return jsonify({"error": "Downloaded file is too small or corrupt."}), 500
@@ -675,6 +672,7 @@ def download_sample_reports(company):
         return jsonify({"message": "Downloaded", "company": company, "file": filename})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ========== FUNDAMENTAL EXTRACT ==========
 @app.route('/extract_fundamentals/<company>', methods=['GET'])
@@ -711,16 +709,14 @@ def extract_fundamentals(company):
     except:
         return jsonify({"error": "Failed to parse numeric values properly"}), 500
 
-    # Insert into database
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT OR REPLACE INTO fundamentals
-        (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (company, net_profit, shares_out, dividend_paid, book_val))
-    conn.commit()
-    conn.close()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO fundamentals
+            (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (company, net_profit, shares_out, dividend_paid, book_val))
+        conn.commit()
 
     return jsonify({
         "company": company,
@@ -729,13 +725,15 @@ def extract_fundamentals(company):
         "dividend_paid": dividend_paid if dividend_paid is not None else "Not found",
         "book_value": book_val if book_val is not None else "Not found"
     })
-        
+       
   
 # ========== DEBUG TEXT ROUTE ==========
 @app.route('/debug_pdf_text/<company>', methods=['GET'])
 def debug_pdf_text(company):
     company = company.upper()
     folder = f'reports/{company}'
+    if not os.path.exists(folder):
+        return jsonify({"error": "No reports found for this company"}), 404
 
     files = [f for f in os.listdir(folder) if f.endswith('.pdf')]
     if not files:
@@ -752,17 +750,17 @@ def debug_pdf_text(company):
         return jsonify({"error": str(e)}), 500
 
 
+
 # =============== ❌❌❌ ADMIN PANEL ❌❌❌ ===============
 
-
+# ========== Admin Route
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
-        if request.form['password'] == "StockMateAdmin@47":
+        if request.form['password'] == ADMIN_PASSWORD:
             session['logged_in'] = True
             return redirect(url_for('admin_dashboard'))
-        return r"Oops!! That Key Doesn't Fit the Lock!", 403
-
+        return "Oops!! That Key Doesn't Fit the Lock!", 403
     return render_template_string("""
         <h2>StockMate Admin Login</h2>
         <form method="POST">
@@ -771,35 +769,35 @@ def admin_login():
         </form>
     """)
 
+
+# ========== Admin Dashboard Route
 @app.route('/admin/dashboard')
 def admin_dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('admin_login'))
-
     try:
         with open('fundamentals.json') as f:
             data = json.load(f)
     except:
         data = {}
-
     html = "<h2>Company Fundamentals</h2><ul>"
     for k in sorted(data.keys()):
         html += f"<li><strong>{k}</strong> — <a href='/admin/edit/{k}'>Edit</a></li>"
     html += "</ul>"
     return html
 
+
+# ========== Admin Edit Company Route
 @app.route('/admin/edit/<company>', methods=['GET', 'POST'])
 def edit_company(company):
     if not session.get('logged_in'):
         return redirect(url_for('admin_login'))
-
     company = company.upper()
     try:
         with open('fundamentals.json') as f:
             data = json.load(f)
     except:
         data = {}
-
     if request.method == 'POST':
         data[company] = {
             "net_profit": request.form['net_profit'],
@@ -810,13 +808,11 @@ def edit_company(company):
         with open('fundamentals.json', 'w') as f:
             json.dump(data, f, indent=2)
         return redirect(url_for('admin_dashboard'))
-
     values = data.get(company, {"net_profit":"", "number_of_shares_in_issue":"", "dividend_paid":"", "book_value":""})
-
     return render_template_string(f"""
         <h2>Edit Fundamentals for {company}</h2>
         <form method="POST">
-            Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>            
+            Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>
             Number of Shares Issued: <input name="number_of_shares_in_issue" value="{values['number_of_shares_in_issue']}"/><br>
             Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>
             Book Value: <input name="book_value" value="{values['book_value']}"/><br>
@@ -824,20 +820,31 @@ def edit_company(company):
         </form>
         <a href="/admin/dashboard">← Back to dashboard</a>
     """)
+
     
 # ========== SCHEDULER ==========
+scheduler = BackgroundScheduler()
+
 def scheduled_scrape():
     print("Scheduled scrape running...")
     data = scrape_mse()
     if data:
         save_data(data)
 
+def shutdown_scheduler(*args):
+    scheduler.shutdown(wait=True)
+    print("Scheduler shut down Gracefully")
+
+
 # ========== INIT ==========
 if __name__ == '__main__':
     init_db()
-    scheduler = BackgroundScheduler()
+    initialize_fundamentals()
     scheduler.add_job(scheduled_scrape, trigger='interval', minutes=5)
     scheduler.start()
-    atexit.register(lambda: scheduler.shutdown(wait=False))
-    app.run(host='0.0.0.0', port=5000, debug=True)
-  
+    signal.signal(signal.SIGTERM, shutdown_scheduler)
+    signal.signal(signal.SIGINT, shutdown_scheduler)
+    try:
+        app.run(host='0.0.0.0', port=5000, debug=False)
+    finally:
+        shutdown_scheduler()
