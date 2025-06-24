@@ -303,13 +303,12 @@ fundamentals_data = [
             "book_value": "51,819,989,685.90"
         }
     ]
+conn = sqlite3.connect('database.db')
+cursor = conn.cursor()
 
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-
-    for entry in fundamentals_data:
-        cursor.execute('''
-            INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+for entry in fundamentals_data:
+    cursor.execute('''
+        INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
             VALUES (?, ?, ?, ?, ?)
         ''', (
             entry["counter"],
@@ -319,8 +318,8 @@ fundamentals_data = [
             entry["book_value"]
         ))
 
-    conn.commit()
-    conn.close()
+conn.commit()
+conn.close()
 
 # ======= Insert Fundamentals 
 @app.route('/insert_fundamentals', methods = ['POST'])
