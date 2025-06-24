@@ -53,35 +53,165 @@ def convert_to_local_time(utc_time_str):
     except:
         return utc_time_str 
         
+
 # ========== DATABASE INIT ==========
 def init_db():
-    conn = sqlite3.connect('database.db') # Use your PostgreSQL engine later
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS stocks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            counter TEXT,
-            last_price TEXT,
-            change TEXT,
-            volume TEXT,
-            turnover TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Fundamentals table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS fundamentals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            counter TEXT UNIQUE,
-            net_profit REAL,           
-            number_of_shares_in_issue INTEGER,
-            dividend_paid REAL,
-            book_value REAL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS stocks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                counter TEXT,
+                last_price TEXT,
+                change TEXT,
+                volume TEXT,
+                turnover TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS fundamentals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                counter TEXT UNIQUE,
+                net_profit REAL,
+                number_of_shares_in_issue INTEGER,
+                dividend_paid REAL,
+                book_value REAL
+            )
+        ''')
+        conn.commit()
+
+def initialize_fundamentals():
+    fundamentals_data = [
+        {
+            "counter": "AIRTEL",
+            "net_profit": "42714422219.62",
+            "number_of_shares_in_issue": "11000000000",
+            "dividend_paid": "21875568000.00",
+            "book_value": "32120000000.00"
+        },
+        {
+            "counter": "BHL",
+            "net_profit": "-1369168339.45",
+            "number_of_shares_in_issue": "5878254935",
+            "dividend_paid": "0.00",
+            "book_value": "65131064679.80"
+        },
+        {
+            "counter": "FDHB",
+            "net_profit": "74055922113.91",
+            "number_of_shares_in_issue": "6901031250",
+            "dividend_paid": "32720549568.75",
+            "book_value": "97373550937.50"
+        },
+        {
+            "counter": "FMBCH",
+            "net_profit": "118254740000.00",
+            "number_of_shares_in_issue": "2458250000",
+            "dividend_paid": "8850053988.00",
+            "book_value": "329085927500.00"
+        },
+        {
+            "counter": "ICON",           
+            "net_profit": "24490000.00",
+            "number_of_shares_in_issue": "6680000000",
+            "dividend_paid": "1942477200.00",
+            "book_value": "146225200000.00"
+        },
+        {
+            "counter": "ILLOVO",
+            "net_profit": "22631873664.47",
+            "number_of_shares_in_issue": "713444391",
+            "dividend_paid": "3578500083.93",
+            "book_value": "148781693299.14"
+        },
+        {
+            "counter": "MPICO",
+            "net_profit": "8535675173.68",
+            "number_of_shares_in_issue": "2298047460",
+            "dividend_paid": "987300938.05",
+            "book_value": "65195606440.20"
+        },
+        {
+            "counter": "NBM",
+            "net_profit": "102283000000.00",
+            "number_of_shares_in_issue": "466931738",
+            "dividend_paid": "59060764860.77",
+            "book_value": "268560458428.08"
+        },
+        {
+            "counter": "NBS",
+            "net_profit": "72978138905.20",
+            "number_of_shares_in_issue": "2910573356",
+            "dividend_paid": "63647021073.80",
+            "book_value": "112057074206.00"
+        },
+        {
+            "counter": "NICO",
+            "net_profit": "72006217688.65",
+            "number_of_shares_in_issue": "1043041096",
+            "dividend_paid": "22981533076.39",
+            "book_value": "155726035632.8"
+        },
+        {
+            "counter": "NITL",
+            "net_profit": "29759480000.00",
+            "number_of_shares_in_issue": "135000000",
+            "dividend_paid": "1715933700.00",
+            "book_value": "73803150000.00"
+        },
+        {
+            "counter": "OMU",
+            "net_profit": "2595650000.00",
+            "number_of_shares_in_issue": "16977551",
+            "dividend_paid": "1404909203.96",
+            "book_value": "19469855486.80"
+        },
+        {
+            "counter": "PCL",
+            "net_profit": "64673000000.00",
+            "number_of_shares_in_issue": "120255820",
+            "dividend_paid": "1346858449.67",
+            "book_value": "348566304502.80"
+        },
+        {
+            "counter": "STANDARD",
+            "net_profit": "86365000000.00",
+            "number_of_shares_in_issue": "234668162",
+            "dividend_paid": "43881111188.97",
+            "book_value": "259843362419.36"
+        },
+        {
+            "counter": "SUNBIRD",
+            "net_profit": "10624630000.00",
+            "number_of_shares_in_issue": "261582580",
+            "dividend_paid": "3396746848.44",
+            "book_value": "69889633724.40"
+        },
+        {
+            "counter": "TNM",
+            "net_profit": "10060000000.00",
+            "number_of_shares_in_issue": "11541200375",
+            "dividend_paid": "0.00",
+            "book_value": "51819989685.90"
+        }
+    ]
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        for entry in fundamentals_data:
+            cursor.execute('''
+                INSERT OR IGNORE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                entry["counter"],
+                float(entry["net_profit"].replace(',', '')),
+                float(entry["number_of_shares_in_issue"].replace(',', '')),
+                float(entry["dividend_paid"].replace(',', '')),
+                float(entry["book_value"].replace(',', ''))
+            ))
+        conn.commit()
+
 
 # ========== SCRAPE ==========
 def scrape_mse():
@@ -110,25 +240,28 @@ def scrape_mse():
         print("Scraping Error:", e)
         return []
 
+
 # ========== SAVE ==========
 def save_data(stock_data):
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    for item in stock_data:
-        c.execute('''
-            SELECT 1 FROM stocks
-            WHERE counter = ? AND last_price = ? AND change = ? AND volume = ? AND turnover = ?
-            AND timestamp >= datetime('now', '-1 hour')
-        ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
-        if not c.fetchone():
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        for item in stock_data:
             c.execute('''
-                INSERT INTO stocks (counter, last_price, change, volume, turnover)
-                VALUES (?, ?, ?, ?, ?)
+                SELECT 1 FROM stocks
+                WHERE counter = ? AND last_price = ? AND change = ? AND volume = ? AND turnover = ?
+                AND timestamp >= datetime('now', '-1 hour')
             ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
-    conn.commit()
-    conn.close()
+            if not c.fetchone():
+                c.execute('''
+                    INSERT INTO stocks (counter, last_price, change, volume, turnover)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+        conn.commit()
+
 
 # ========== API ROUTES ==========
+
+# ======= Home Route
 @app.route('/')
 def home():
     return "Hello There! StockMate API is Running!"
@@ -144,356 +277,182 @@ def scrape_and_save():
     else:
         return jsonify({"error": "Failed to scrape data"}), 500
 
+
 # ======= Stocks Route
 @app.route('/stocks', methods=['GET'])
 def get_stocks():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT counter, last_price, change, volume, turnover, timestamp FROM stocks ORDER BY timestamp DESC LIMIT 20')
-    rows = cursor.fetchall()
-    conn.close()
-    return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])} for r in rows])
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT counter, last_price, change, volume, turnover, timestamp FROM stocks ORDER BY timestamp DESC LIMIT 20')
+        rows = cursor.fetchall()
+        return jsonify([
+            {"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])}
+            for r in rows
+        ])
+
 
 # ======= Latest Prices Route
 @app.route('/latest_prices', methods=['GET'])
 def latest_prices():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT counter, last_price, change, volume, turnover, MAX(timestamp)
-        FROM stocks
-        GROUP BY counter
-    ''')
-    rows = cursor.fetchall()
-    conn.close()
-    
-    return jsonify([{"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])} for r in rows])
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT counter, last_price, change, volume, turnover, MAX(timestamp)
+            FROM stocks
+            GROUP BY counter
+        ''')
+        rows = cursor.fetchall()
+        return jsonify([
+            {"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])}
+            for r in rows
+        ])
 
-# ======= Prices History Route
-@app.route('/price_history/<counter>', methods=['GET'])
-def price_history(counter):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT timestamp, last_price
-        FROM stocks
-        WHERE counter = ?
-        ORDER BY timestamp DESC
-        LIMIT 10
-    ''', (counter,))
-    rows = cursor.fetchall()
-    conn.close()
-    
-    return jsonify([
-        {"timestamp": convert_to_local_time(row[0]), "price": row[1]} for row in reversed(rows)
-    ])
 
 # ======= History Route
 @app.route('/history/<counter>', methods=['GET'])
-def get_price_history(counter):
+def get_history(counter):
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT DATE(timestamp), last_price
-            FROM stocks
-            WHERE counter = ?
-            ORDER BY timestamp ASC
-        ''', (counter,))
-        rows = cursor.fetchall()
-        conn.close()
-
-        # Clean and format results
-        history = []
-        for row in rows:
-            date_str = row[0]
-            try:
-                price = float(str(row[1]).replace(',', ''))
-                history.append({"date": date_str, "price": price})
-            except:
-                continue
-
-        return jsonify(history)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT timestamp, last_price
+                FROM stocks
+                WHERE counter = ?
+                ORDER BY timestamp DESC
+                LIMIT 10
+            ''', (counter,))
+            rows = cursor.fetchall()
+        history = [
+            {
+                "date": convert_to_local_time(row[0]),
+                "price": float(str(row[1]).replace(',', '')) if row[1] else None
+            } for row in rows
+        ]
+        return jsonify(history[::-1] if request.args.get('order') == 'asc' else history)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ==== Fundamentals Data
-fundamentals_data = [
-        {
-  "AIRTEL": {
-    "counter": "AIRTEL",
-            "net_profit": "42,714,422,219.62",
-            "number_of_shares_in_issue": "11,000,000,000",
-            "dividend_paid": "21,875,568,000.00",
-            "book_value": "32,120,000,000.00"
-  },
-  "BHL": {
-    "counter": "BHL",
-            "net_profit": "-1,369,168,339.45",
-            "number_of_shares_in_issue": "5,878,254,935",
-            "dividend_paid": "0.00",
-            "book_value": "65,131,064,679.80"
-  },
-  "FDHB": {
-    "counter": "FDHB",
-            "net_profit": "74,055,922,113.91",
-            "number_of_shares_in_issue": "6,901,031,250",
-            "dividend_paid": "32,720,549,568.75",
-            "book_value": "97,373,550,937.50"
-  },
-  "FMBCH": {
-    "counter": "FMBCH",
-            "net_profit": "118,254,740,000.00",
-            "number_of_shares_in_issue": "2,458,250,000",
-            "dividend_paid": "8,850,053,988.00",
-            "book_value": "329,085,927,500.00"
-  },
-  "ICON": {
-    "counter": "ICON",           
-            "net_profit": "24,490,000.00",
-            "number_of_shares_in_issue": "6,680,000,000",
-            "dividend_paid": "1,942,477,200.00",
-            "book_value": "146,225,200,000.00"
-  },
-  "ILLOVO": {
-    "counter": "ILLOVO",
-            "net_profit": "22,631,873,664.47",
-            "number_of_shares_in_issue": "713,444,391",
-            "dividend_paid": "3,578,500,083.93",
-            "book_value": "148,781,693,299.14"
-  },
-  "MPICO": {
-    "counter": "MPICO",
-            "net_profit": "8,535,675,173.68",
-            "number_of_shares_in_issue": "2,298,047,460",
-            "dividend_paid": "987,300,938.05",
-            "book_value": "65,195,606,440.20"
-  },
-  "NBM": {
-    "counter": "NBM",
-            "net_profit": "102,283,000,000.00",
-            "number_of_shares_in_issue": "466,931,738",
-            "dividend_paid": "59,060,764,860.77",
-            "book_value": "268,560,458,428.08"
-  },
-  "NBS": {
-    "counter": "NBS",
-            "net_profit": "72,978,138,905.20",
-            "number_of_shares_in_issue": "2,910,573,356",
-            "dividend_paid": "63,647,021,073.80",
-            "book_value": "112,057,074,206.00"
-  },
-  "NICO": {
-    "counter": "NICO",
-            "net_profit": "72,006,217,688.65",
-            "number_of_shares_in_issue": "1,043,041,096",
-            "dividend_paid": "22,981,533,076.39",
-            "book_value": "155,726,035,632.8"
-  },
-  "NITL": {
-    "counter": "NITL",
-            "net_profit": "29,759,480,000.00",
-            "number_of_shares_in_issue": "135,000,000",
-            "dividend_paid": "1,715,933,700.00",
-            "book_value": "73,803,150,000.00"
-  },
-  "OMU": {
-    "counter": "OMU",
-            "net_profit": "2,595,650,000.00",
-            "number_of_shares_in_issue": "16,977,551",
-            "dividend_paid": "1,404,909,203.96",
-            "book_value": "19,469,855,486.80"
-  },
-  "PCL": {
-    "counter": "PCL",
-            "net_profit": "64,673,000,000.00",
-            "number_of_shares_in_issue": "120,255,820",
-            "dividend_paid": "1,346,858,449.67",
-            "book_value": "348,566,304,502.80"
-  },
-  "STANDARD": {
-    "counter": "STANDARD",
-            "net_profit": "86,365,000,000.00",
-            "number_of_shares_in_issue": "234,668,162",
-            "dividend_paid": "43,881,111,188.97",
-            "book_value": "259,843,362,419.36"
-  },
-  "SUNBIRD": {
-    "counter": "SUNBIRD",
-            "net_profit": "10,624,630,000.00",
-            "number_of_shares_in_issue": "261,582,580",
-            "dividend_paid": "3,396,746,848.44",
-            "book_value": "69,889,633,724.40"
-  },
-  "TNM": {
-    "counter": "TNM",
-            "net_profit": "10,060,000,000.00",
-            "number_of_shares_in_issue": "11,541,200,375",
-            "dividend_paid": "0.00",
-            "book_value": "51,819,989,685.90"
-  }
-}
-]
-conn = sqlite3.connect('database.db')
-cursor = conn.cursor()
-
-for entry in fundamentals_data:
-    cursor.execute('''
-        INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            entry["counter"],
-            entry["net_profit"],
-            entry["number_of_shares_in_issue"],
-            entry["dividend_paid"],
-            entry["book_value"]
-        ))
-
-conn.commit()
-conn.close()
 
 # ======= Insert Fundamentals 
-@app.route('/insert_fundamentals', methods = ['POST'])
+@app.route('/insert_fundamentals', methods=['POST'])
 def insert_fundamentals():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        for entry in data:
+            c.execute('''
+                INSERT OR REPLACE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                entry['counter'],
+                float(str(entry['net_profit']).replace(',', '')),
+                float(str(entry['number_of_shares_in_issue']).replace(',', '')),
+                float(str(entry['dividend_paid']).replace(',', '')),
+                float(str(entry['book_value']).replace(',', ''))
+            ))
+        conn.commit()
+    return jsonify({"message": "Fundamentals inserted successfully"})
 
-    for counter, values in data_dict.items():
-        c.execute('''
-            INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            counter,
-            values['net_profit'],
-            values['number_of_shares_in_issue'],
-            values['dividend_paid'],
-            values['book_value']
-        ))
-    
-    conn.commit()
-    conn.close()
 
 # ======= Fundamentals Route
 @app.route('/fundamentals/<counter>', methods=['GET'])
 def get_fundamentals(counter):
     counter = counter.upper()
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-            FROM fundamentals WHERE counter = ?
-        ''', (counter,))
-        row = cursor.fetchone()
-        conn.close()
-
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+                FROM fundamentals WHERE counter = ?
+            ''', (counter,))
+            row = cursor.fetchone()
         if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
         net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
-        
-        # Parse and clean numerical values
-        try:
-            net_profit = float(str(row['net_profit']).replace(',', ''))
-            shares = float(str(row['number_of_shares_in_issue']).replace(',', ''))
-            dividend = float(str(row['dividend_paid']).replace(',', ''))
-            book_value = float(str(row['book_value']).replace(',', ''))
-        except Exception as e:
-            return jsonify({"error": f"Parsing error: {str(e)}"}), 500
+        net_profit = float(str(net_profit).replace(',', '')) if net_profit else 0
+        shares = float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
+        dividend = float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
+        book_value = float(str(book_value).replace(',', '')) if book_value else 0
 
-        eps = net_profit / shares if shares and net_profit else 0
-        bvps = book_value / shares if shares and book_value else 0
-        dvps = dividend / shares if shares and dividend else 0
+        eps = net_profit / shares if shares else 0
+        bvps = book_value / shares if shares else 0
+        dvps = dividend / shares if shares else 0
 
-        # Fetch latest price
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT last_price FROM stocks
-            WHERE counter = ?
-            ORDER BY timestamp DESC
-            LIMIT 1
-        ''', (counter,))
-        result = cursor.fetchone()
-        conn.close()
-
-        if result:
-            price = float(str(result[0]).replace(',', ''))
-        else:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT last_price FROM stocks
+                WHERE counter = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            ''', (counter,))
+            result = cursor.fetchone()
+        if not result:
             return jsonify({"error": "Price data not available"}), 404
 
+        price = float(str(result[0]).replace(',', '')) if result[0] else 0
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
-        div_yield = (dvps / price) * 100 if price else None
-        
+        div_yield = (dvps / price) * 100 if price and dvps else None
+
         return jsonify({
             "eps": f"{eps:.2f}",
             "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
             "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
             "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A"
         })
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ======= Metrics Route
 @app.route('/metrics/<counter>', methods=['GET'])
 def stock_metrics(counter):
     counter = counter.upper()
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-            FROM fundamentals WHERE counter = ?
-        ''', (counter,))
-        row = cursor.fetchone()
-        conn.close()
-
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+                FROM fundamentals WHERE counter = ?
+            ''', (counter,))
+            row = cursor.fetchone()
         if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
         net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
-        
-        # Parse and clean numbers
-        try:
-            net_profit = float(str(row['net_profit']).replace(',', ''))
-            shares = float(str(row['number_of_shares_in_issue']).replace(',', ''))
-            dividend = float(str(row['dividend_paid']).replace(',', ''))
-            book_value = float(str(row['book_value']).replace(',', ''))
-        except Exception as e:
-            return jsonify({"error": f"Parsing error: {str(e)}"}), 500
+        net_profit = float(str(net_profit).replace(',', '')) if net_profit else 0
+        shares = float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
+        dividend = float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
+        book_value = float(str(book_value).replace(',', '')) if book_value else 0
 
-        # Calculate Metrics 
-        eps = net_profit / shares if shares and net_profit else 0
-        bvps = book_value / shares if shares and book_value else 0
-        dvps = dividend / shares if shares and dividend else 0
-        
-        # Fetch latest stock data
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT last_price, change, volume, turnover, timestamp
-            FROM stocks
-            WHERE counter = ?
-            ORDER BY timestamp DESC
-            LIMIT 1
-        ''', (counter,))
-        result = cursor.fetchone()
-        conn.close()
+        eps = net_profit / shares if shares else 0
+        bvps = book_value / shares if shares else 0
+        dvps = dividend / shares if shares else 0
 
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT last_price, change, volume, turnover, timestamp
+                FROM stocks
+                WHERE counter = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            ''', (counter,))
+            result = cursor.fetchone()
         if not result:
             return jsonify({"error": "Latest Price data not found"}), 404
 
-        price_str = str(result[0]).replace(',', '')
-        price = float(price_str) if price_str else 0
-        
+        price = float(str(result[0]).replace(',', '')) if result[0] else 0
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
-        div_yield = (dvps / price) * 100 if price else None
+        div_yield = (dvps / price) * 100 if price and dvps else None
 
         return jsonify({
-            "counter": counter.upper(),
+            "counter": counter,
             "last_price": f"{price:.2f}",
             "change": result[1],
             "volume": result[2],
@@ -507,23 +466,25 @@ def stock_metrics(counter):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# 📄 PDF class: Header and Footer using DejaVu font
+
+# ========== PDF Class ==========
 class PDF(FPDF):
     def header(self):
-        self.image("StockMate-logo.png", 10, 8, 30)  # (x, y, width)
+        logo_path = "StockMate-logo.png"
+        if os.path.exists(logo_path):
+            self.image(logo_path, 10, 8, 30)
         self.set_xy(50, 10)
-        self.set_fill_color(0, 102, 204)  # Blue
+        self.set_fill_color(0, 102, 204)
         self.set_text_color(255, 255, 255)
         self.set_font("DejaVu", "B", 20)
         self.cell(140, 10, "StockMate Fundamentals Report", ln=True, align='C', fill=True)
         self.ln(15)
-        # Motto
         self.set_text_color(75, 0, 130)
         self.set_font("DejaVu", "I", 10)
         self.set_xy(50, 20)
         self.cell(140, 8, "Smart Insights. Wise Investments.", ln=True, align='C')
         self.ln(10)
-    
+
     def footer(self):
         self.set_y(-15)
         self.set_font("DejaVu", "", 10)
@@ -531,85 +492,82 @@ class PDF(FPDF):
         self.cell(0, 6, "Call/WhatsApp: +265888695513", ln=True, align='C', link='https://wa.me/265888695513')
         self.cell(0, 6, "Email: juanphiri7@gmail.com", ln=True, align='C', link='mailto:juanphiri7@gmail.com')
 
+def load_fonts(pdf):
+    font_files = {
+        "": "fonts/DejaVuSans.ttf",
+        "B": "fonts/DejaVuSans-Bold.ttf",
+        "I": "fonts/DejaVuSans-Oblique.ttf",
+        "BI": "fonts/DejaVuSans-BoldOblique.ttf"
+    }
+    for style, path in font_files.items():
+        if os.path.exists(path):
+            pdf.add_font("DejaVu", style, path, uni=True)
+        else:
+            print(f"Font file {path} not found, using default font")
+            pdf.set_font("Arial", style, 12)
+
+
 # ======= Fundamentals Report Route
 @app.route('/fundamentals_report/<counter>', methods=['GET'])
 def fundamentals_report(counter):
     counter = counter.upper()
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-            FROM fundamentals WHERE counter = ?
-        ''', (counter,))
-        row = cursor.fetchone()
-        conn.close()
-
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+                FROM fundamentals WHERE counter = ?
+            ''', (counter,))
+            row = cursor.fetchone()
         if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
         net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
-  
-        # Parse numeric data
-        net_profit = float(str(row['net_profit']).replace(',', ''))
-        shares = float(str(row['number_of_shares_in_issue']).replace(',', ''))
-        dividend = float(str(row['dividend_paid']).replace(',', ''))
-        book_value = float(str(row.get('book_value', 0)).replace(',', ''))
+        net_profit = float(str(net_profit).replace(',', '')) if net_profit else 0
+        shares = float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
+        dividend = float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
+        book_value = float(str(book_value).replace(',', '')) if book_value else 0
 
-        #Calculate Metrics
-        eps = net_profit / shares if shares and net_profit else 0
-        bvps = book_value / shares if shares and book_value else 0
-        dvps = dividend / shares if shares and dividend else 0
+        eps = net_profit / shares if shares else 0
+        bvps = book_value / shares if shares else 0
+        dvps = dividend / shares if shares else 0
 
-        # Get latest stock price
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT last_price FROM stocks
-            WHERE counter = ?
-            ORDER BY timestamp DESC LIMIT 1
-        ''', (counter,))
-        result = cursor.fetchone()
-        conn.close()
-
-        if result:
-            price = float(str(result[0]).replace(',', ''))
-        else:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT last_price FROM stocks
+                WHERE counter = ?
+                ORDER BY timestamp DESC LIMIT 1
+            ''', (counter,))
+            result = cursor.fetchone()
+        if not result:
             return jsonify({"error": "Price data not available"}), 404
 
+        price = float(str(result[0]).replace(',', '')) if result[0] else 0
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
-        div_yield = (dvps / price) * 100 if price else None
+        div_yield = (dvps / price) * 100 if price and dvps else None
 
-        # === Create PDF ===
         pdf = PDF()
-        
-        pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
-        pdf.add_font("DejaVu", "B", "fonts/DejaVuSans-Bold.ttf", uni=True)
-        pdf.add_font("DejaVu", "I", "fonts/DejaVuSans-Oblique.ttf", uni=True)
-        pdf.add_font("DejaVu", "BI", "fonts/DejaVuSans-BoldOblique.ttf", uni=True)
-        
+        load_fonts(pdf)
         pdf.add_page()
         pdf.ln(10)
-        # ========== Company Logo + Name ==========
-        logo_path = f"company_logos/{counter.upper()}.png"
+
+        logo_path = f"company_logos/{counter}.png"
         logo_width = 25
-        
         if os.path.exists(logo_path):
             y_start = pdf.get_y()
             pdf.image(logo_path, x=10, y=y_start, w=logo_width)
-            pdf.set_xy(10 + logo_width + 10, y_start + 5) 
+            pdf.set_xy(10 + logo_width + 10, y_start + 5)
             pdf.set_font("DejaVu", "B", 16)
             pdf.cell(0, 10, f"{counter} Snapshot", ln=True)
-            # Push cursor down so logo and text above don't overlap with content
             pdf.set_y(y_start + logo_width + 5)
         else:
             pdf.set_font("DejaVu", "B", 16)
             pdf.set_text_color(0)
-            pdf.cell(0, 10, f"{counter.upper()} Snapshot", ln=True)
+            pdf.cell(0, 10, f"{counter} Snapshot", ln=True)
             pdf.ln(10)
 
-        # ==== Financial Info ====
         pdf.set_text_color(0)
         pdf.set_font("DejaVu", "", 12)
         pdf.cell(0, 10, f"Latest Price: MK {price:,.2f}" if price else "N/A", ln=True)
@@ -617,7 +575,6 @@ def fundamentals_report(counter):
         pdf.cell(0, 10, f"Dividend Paid: MK {dividend:,.2f}" if dividend else "N/A", ln=True)
         pdf.cell(0, 10, f"Number of Shares in Issue: {shares:,.0f}" if shares else "N/A", ln=True)
         pdf.cell(0, 10, f"Book Value: MK {book_value:,.2f}" if book_value else "N/A", ln=True)
-        # Metrics 
         pdf.ln(5)
         pdf.set_font("DejaVu", "B", 16)
         pdf.cell(0, 10, "Key Financial Metrics", ln=True)
@@ -627,19 +584,15 @@ def fundamentals_report(counter):
         pdf.cell(0, 10, f"Dividend Yield: {div_yield:.2f}%" if div_yield else "N/A", ln=True)
         pdf.cell(0, 10, f"P/B Ratio: {pb_ratio:.2f}" if pb_ratio else "N/A", ln=True)
         pdf.cell(0, 10, f"Book Value Per Share (BVPS): {bvps:.2f}" if bvps else "N/A", ln=True)
-        #Disclaimer
         pdf.ln(12)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
-        pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange.\nAccuracy is NOT guaranteed. Scan the QR Code to verify {counter.upper()} official data. Invest wisely.")
+        pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange.\nAccuracy is NOT guaranteed. Scan the QR Code to verify {counter} official data. Invest wisely.")
         pdf.ln(7)
         pdf.set_font("DejaVu", "B", 10)
         pdf.set_text_color(0)
-        pdf.cell(0, 10, f"For more information about {counter.upper()}, Scan the QR Code.")
-        
-        filename = f"{counter.upper()}-Fundamentals-Report.pdf"
-       
-        # === Generate QR Code for MSE companies ===
+        pdf.cell(0, 10, f"For more information about {counter}, Scan the QR Code.")
+
         company_urls = {
             "AIRTEL": "https://mse.co.mw/company/MWAIRT001156",
             "BHL": "https://mse.co.mw/company/MWBHL001164",
@@ -658,23 +611,27 @@ def fundamentals_report(counter):
             "SUNBIRD": "https://mse.co.mw/company/MWSUN001119",
             "TNM": "https://mse.co.mw/company/MWTNM001151"
         }
-            
-        qr_url = company_urls.get(counter.upper(), f"https://mse.co.mw")
-        qr_img = qrcode.make(qr_url)
-        qr_path = f"{counter}_qr.png"
-        qr_img.save(qr_path)
 
-        # Insert QR into PDF
-        pdf.image(qr_path, x=160, y=240, w=40, h=40)
+        qr_url = company_urls.get(counter, "https://mse.co.mw")
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_qr:
+            qr_img = qrcode.make(qr_url)
+            qr_img.save(tmp_qr.name)
+            pdf.image(tmp_qr.name, x=160, y=240, w=40, h=40)
+            qr_path = tmp_qr.name
 
-        os.remove(qr_path)
-        pdf.output(filename)
-
-        return send_file(filename, as_attachment=True)
-
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+            filename = tmp_pdf.name
+            pdf.output(filename)
+            response = send_file(filename, as_attachment=True, download_name=f"{counter}-Fundamentals-Report.pdf")
+            os.remove(filename)
+            os.remove(qr_path)
+            return response
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+       
+                
 # ========== FINANCIAL REPORTS PDF DOWNLOAD ==========
 @app.route('/download_sample_reports/<company>', methods=['GET'])
 def download_sample_reports(company):
