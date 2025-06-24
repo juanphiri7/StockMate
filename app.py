@@ -13,7 +13,7 @@ import sqlite3
 import requests
 import tempfile
 import requests_cache
-import secrets; print(secrets.token_hex(16))
+import secrets 
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 from fpdf import FPDF
