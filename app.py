@@ -22,10 +22,25 @@ from flask import Flask, request, jsonify, render_template_string, redirect, url
 from contextlib import contextmanager
 
 
+# ========== Load Environment Variables ==========
+load_dotenv()
+
+
+# ========== Enable Request Caching ==========
+requests_cache.install_cache('mse_cache', expire_after=300)
+
+
 # ========== Configuration ==========
 DATABASE_PATH = os.getenv('DATABASE_PATH', 'database.db')
 FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'fallback-secret-key-for-dev-only')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'default-dev-password')
+
+
+# ========== Validate Environment Variables ==========
+required_vars = ['DATABASE_PATH', 'FLASK_SECRET_KEY', 'ADMIN_PASSWORD']
+for var in required_vars:
+    if not os.getenv(var):
+        raise ValueError(f"Environment Variable {var} is not Set")
 
 
 # ========== FLASK APP ==========
@@ -215,7 +230,6 @@ def initialize_fundamentals():
 
 
 # ========== SCRAPE ==========
-requests_cache.install_cache('mse_cache', expire_after=300)
 def scrape_mse():
     url = 'https://www.mse.co.mw/'
     headers = {'User-Agent': 'Mozilla/5.0'}
