@@ -1,7 +1,6 @@
 #StockMate by Juan
 
 # ========== Imports ==========
-
 import os
 import re
 import json
@@ -22,9 +21,26 @@ from flask import Flask, request, jsonify, render_template_string, redirect, url
 from contextlib import contextmanager
 
 
+# ========== Configuration ==========
+DATABASE_PATH = os.getenv('DATABASE_PATH', 'database.db')
+FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'fallback-secret-key-for-dev-only')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'default-dev-password')
+
+
 # ========== FLASK APP ==========
 app = Flask(__name__)
-app.secret_key = "your-super-secret-key"
+app.secret_key = FLASK_SECRET_KEY
+
+
+# ========== Database Context Manager ==========
+@contextmanager
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
 
 # ========== TIMEZONE CONVERTER ==========
 def convert_to_local_time(utc_time_str):
