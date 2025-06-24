@@ -8,3 +8,4 @@ fpdf2
 pytz
 qrcode
 Pillow
+python-dotenv
