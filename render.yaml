@@ -1,12 +1,12 @@
 services:
 - type: web
   name: StockMate47
-  runtime: python
+  env: python
   repo: https://github.com/juanphiri7/StockMate
   plan: free
   region: oregon
   buildCommand: pip install -r requirements.txt
-  startCommand: python app.py
+  startCommand:  gunicorn app:app
   autoDeployTrigger: commit
   envVars:
         - key: DATABASE_URL
