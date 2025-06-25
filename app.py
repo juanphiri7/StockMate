@@ -10,7 +10,6 @@ import atexit
 import signal
 import qrcode
 import logging
-import sqlite3 
 import psycopg2 
 import requests
 import tempfile
