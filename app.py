@@ -38,19 +38,16 @@ requests_cache.install_cache('mse_cache', expire_after=300)
 
 
 # ========== Configuration ==========
-#DATABASE_PATH = os.getenv('DATABASE_PATH) or 'database.db'# Delete ❌
+DATABASE_URL = os.getenv('DATABASE_URL)
 FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY') or 'fallback-secret-key-for-dev-only'
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') or 'default-dev-password'
 
 
 # ========== Validate Environment Variables ==========
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-required_vars = ['DATABASE_PATH', 'FLASK_SECRET_KEY', 'ADMIN_PASSWORD']
+required_vars = ['DATABASE_URL', 'FLASK_SECRET_KEY', 'ADMIN_PASSWORD']
 for var in required_vars:
-    if not globals()[var]:
-        logger.error(f"Environment variable {var} is not set")
+    if not globals().get(var):
+        logger.error(f"Environment Variable {var} is Not Set")
         raise ValueError(f"Environment variable {var} is not Set")
 
 
@@ -60,8 +57,6 @@ app.secret_key = FLASK_SECRET_KEY
 
 
 # ========== Database Context Manager ==========
-DATABASE_URL = os.getenv('DATABASE_URL')
-
 @contextmanager
 def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL)
@@ -85,30 +80,35 @@ def convert_to_local_time(utc_time_str):
 
 # ========== DATABASE INIT ==========
 def init_db():
-    with get_db_connection() as conn:
-        c = conn.cursor()
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS stocks (
-                id SERIAL PRIMARY KEY,
-                counter TEXT,
-                last_price TEXT,
-                change TEXT,
-                volume TEXT,
-                turnover TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS fundamentals (
-                id SERIAL PRIMARY KEY,
-                counter TEXT UNIQUE,
-                net_profit REAL,
-                number_of_shares_in_issue INTEGER,
-                dividend_paid REAL,
-                book_value REAL
-            )
-        ''')
-        conn.commit()
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS stocks (
+                    id SERIAL PRIMARY KEY,
+                    counter TEXT UNIQUE NOT NULL,
+                    last_price REAL,
+                    change REAL,
+                    volume INTEGER,
+                    turnover REAL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS fundamentals (
+                    id SERIAL PRIMARY KEY,
+                    counter TEXT UNIQUE NOT NULL,
+                    net_profit REAL,
+                    number_of_shares_in_issue INTEGER,
+                    dividend REAL,
+                    book_value REAL
+                )
+            ''')
+            conn.commit()
+            logger.info("Database Initialized Successfully")
+    except Exception as e:
+        logger.error(f"Error Initializing Database: {str(e)}")
+        raise
 
 def initialize_fundamentals():
     fundamentals_data = [
@@ -225,22 +225,30 @@ def initialize_fundamentals():
             "book_value": "51819989685.90"
         }
     ]
-
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        for entry in fundamentals_data:
-            cursor.execute('''
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-                VALUES (%s, %s, %s, %s, %s) 
-                ON CONFLICT (counter) DO NOTHING 
-            ''', (
-                entry["counter"],
-                float(entry["net_profit"].replace(',', '')),
-                float(entry["number_of_shares_in_issue"].replace(',', '')),
-                float(entry["dividend_paid"].replace(',', '')),
-                float(entry["book_value"].replace(',', ''))
-            ))
-        conn.commit()
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            for entry in fundamentals_data:
+                cursor.execute('''
+                    INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (counter) DO UPDATE
+                    SET net_profit = EXCLUDED.net_profit,
+                        number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
+                        dividend = EXCLUDED.dividend,
+                        book_value = EXCLUDED.book_value
+                ''', (
+                    entry["counter"],
+                    entry["net_profit"],
+                    entry["number_of_shares_in_issue"],
+                    entry["dividend_paid"],
+                    entry["book_value"]
+                ))
+            conn.commit()
+            logger.info("Fundamentals initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing fundamentals: {str(e)}")
+        raise
 
 
 # ========== SCRAPE ==========
@@ -284,7 +292,7 @@ def save_data(stock_data):
             if not c.fetchone():
                 c.execute('''
                     INSERT INTO stocks (counter, last_price, change, volume, turnover)
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (%s,%s,%s,%s,%s)
                 ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
         conn.commit()
 
@@ -347,7 +355,7 @@ def get_history(counter):
             cursor.execute('''
                 SELECT timestamp, last_price
                 FROM stocks
-                WHERE counter = ?
+                WHERE counter = %s
                 ORDER BY timestamp DESC
                 LIMIT 10
             ''', (counter,))
@@ -374,7 +382,7 @@ def insert_fundamentals():
         for entry in data:
             c.execute('''
                 INSERT OR REPLACE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s,%s,%s,%s,%s)
             ''', (
                 entry['counter'],
                 float(str(entry['net_profit']).replace(',', '')),
@@ -395,7 +403,7 @@ def get_fundamentals(counter):
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-                FROM fundamentals WHERE counter = ?
+                FROM fundamentals WHERE counter = %s
             ''', (counter,))
             row = cursor.fetchone()
         if not row:
@@ -415,7 +423,7 @@ def get_fundamentals(counter):
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT last_price FROM stocks
-                WHERE counter = ?
+                WHERE counter = %s
                 ORDER BY timestamp DESC
                 LIMIT 1
             ''', (counter,))
@@ -447,7 +455,7 @@ def stock_metrics(counter):
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-                FROM fundamentals WHERE counter = ?
+                FROM fundamentals WHERE counter = %s
             ''', (counter,))
             row = cursor.fetchone()
         if not row:
@@ -468,7 +476,7 @@ def stock_metrics(counter):
             cursor.execute('''
                 SELECT last_price, change, volume, turnover, timestamp
                 FROM stocks
-                WHERE counter = ?
+                WHERE counter = %s
                 ORDER BY timestamp DESC
                 LIMIT 1
             ''', (counter,))
@@ -546,7 +554,7 @@ def fundamentals_report(counter):
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-                FROM fundamentals WHERE counter = ?
+                FROM fundamentals WHERE counter = %s
             ''', (counter,))
             row = cursor.fetchone()
         if not row:
@@ -566,7 +574,7 @@ def fundamentals_report(counter):
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT last_price FROM stocks
-                WHERE counter = ?
+                WHERE counter = %s
                 ORDER BY timestamp DESC LIMIT 1
             ''', (counter,))
             result = cursor.fetchone()
@@ -744,7 +752,7 @@ def extract_fundamentals(company):
         cursor.execute('''
             INSERT OR REPLACE INTO fundamentals
             (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         ''', (company, net_profit, shares_out, dividend_paid, book_val))
         conn.commit()
 
