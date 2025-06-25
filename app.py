@@ -83,14 +83,15 @@ def init_db():
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute('DROP TABLE IF EXISTS fundamentals')
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS stocks (
                     id SERIAL PRIMARY KEY,
                     counter TEXT UNIQUE NOT NULL,
-                    last_price REAL,
-                    change REAL,
-                    volume REAL,
-                    turnover REAL,
+                    last_price NUMERIC,
+                    change NUMERIC,
+                    volume BIGINT,
+                    turnover NUMERIC,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -98,10 +99,10 @@ def init_db():
                 CREATE TABLE IF NOT EXISTS fundamentals (
                     id SERIAL PRIMARY KEY,
                     counter TEXT UNIQUE NOT NULL,
-                    net_profit REAL,
-                    number_of_shares_in_issue REAL,
-                    dividend REAL,
-                    book_value REAL
+                    net_profit NUMERIC,
+                    number_of_shares_in_issue BIGINT,
+                    dividend NUMERIC,
+                    book_value NUMERIC
                 )
             ''')
             conn.commit()
@@ -239,10 +240,10 @@ def initialize_fundamentals():
                         book_value = EXCLUDED.book_value
                 ''', (
                     entry["counter"],
-                    entry["net_profit"],
-                    entry["number_of_shares_in_issue"],
-                    entry["dividend_paid"],
-                    entry["book_value"]
+                    float(entry["net_profit"]),
+                    int(entry["number_of_shares_in_issue"]),
+                    float(entry["dividend_paid"]),
+                    float(entry["book_value"])
                 ))
             conn.commit()
             logger.info("Fundamentals initialized successfully")
@@ -293,7 +294,7 @@ def save_data(stock_data):
                 c.execute('''
                     INSERT INTO stocks (counter, last_price, change, volume, turnover)
                     VALUES (%s,%s,%s,%s,%s)
-                ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+                ''', (item['Counter'], float(item['Last Price (MK)']), float(item['% Change']), int(item['Volume']), float(item['Turnover (MK)'])))
         conn.commit()
 
 
