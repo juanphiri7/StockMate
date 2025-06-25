@@ -89,7 +89,7 @@ def init_db():
                     counter TEXT UNIQUE NOT NULL,
                     last_price REAL,
                     change REAL,
-                    volume INTEGER,
+                    volume REAL,
                     turnover REAL,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -99,7 +99,7 @@ def init_db():
                     id SERIAL PRIMARY KEY,
                     counter TEXT UNIQUE NOT NULL,
                     net_profit REAL,
-                    number_of_shares_in_issue INTEGER,
+                    number_of_shares_in_issue REAL,
                     dividend REAL,
                     book_value REAL
                 )
