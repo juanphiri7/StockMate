@@ -10,6 +10,7 @@ import atexit
 import signal
 import qrcode
 import sqlite3
+import psycopg2
 import requests
 import tempfile
 import requests_cache
@@ -51,9 +52,11 @@ app.secret_key = FLASK_SECRET_KEY
 
 
 # ========== Database Context Manager ==========
+DATABASE_URL = os.getenv('DATABASE_URL')
+
 @contextmanager
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = psycopg2.connect(DATABASE_URL)
     try:
         yield conn
     finally:
@@ -78,7 +81,7 @@ def init_db():
         c = conn.cursor()
         c.execute('''
             CREATE TABLE IF NOT EXISTS stocks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 counter TEXT,
                 last_price TEXT,
                 change TEXT,
@@ -89,7 +92,7 @@ def init_db():
         ''')
         c.execute('''
             CREATE TABLE IF NOT EXISTS fundamentals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 counter TEXT UNIQUE,
                 net_profit REAL,
                 number_of_shares_in_issue INTEGER,
