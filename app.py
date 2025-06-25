@@ -10,12 +10,11 @@ import atexit
 import signal
 import qrcode
 import logging
-import sqlite3
+import sqlite3 
 import psycopg2 
 import requests
 import tempfile
 import requests_cache
-import secrets 
 from apscheduler.schedulers.background import BackgroundScheduler
 from bs4 import BeautifulSoup
 from fpdf import FPDF
@@ -28,6 +27,11 @@ from contextlib import contextmanager
 
 # ========== Load Environment Variables ==========
 load_dotenv()
+
+
+# ========== Set Up Logging 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # ========== Enable Request Caching ==========
@@ -49,6 +53,7 @@ for var in required_vars:
     if not globals()[var]:
         logger.error(f"Environment variable {var} is not set")
         raise ValueError(f"Environment variable {var} is not Set")
+
 
 # ========== FLASK APP ==========
 app = Flask(__name__)
