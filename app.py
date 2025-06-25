@@ -9,8 +9,9 @@ import fitz
 import atexit
 import signal
 import qrcode
+import logging
 import sqlite3
-import psycopg2
+import psycopg2 
 import requests
 import tempfile
 import requests_cache
@@ -40,11 +41,14 @@ ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') or 'default-dev-password'
 
 
 # ========== Validate Environment Variables ==========
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 required_vars = ['DATABASE_PATH', 'FLASK_SECRET_KEY', 'ADMIN_PASSWORD']
 for var in required_vars:
     if not globals()[var]:
-        raise ValueError(f"Environment Variable {var} is not Set")
-
+        logger.error(f"Environment variable {var} is not set")
+        raise ValueError(f"Environment variable {var} is not Set")
 
 # ========== FLASK APP ==========
 app = Flask(__name__)
@@ -222,8 +226,9 @@ def initialize_fundamentals():
         cursor = conn.cursor()
         for entry in fundamentals_data:
             cursor.execute('''
-                INSERT OR IGNORE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+                VALUES (%s, %s, %s, %s, %s) 
+                ON CONFLICT (counter) DO NOTHING 
             ''', (
                 entry["counter"],
                 float(entry["net_profit"].replace(',', '')),
