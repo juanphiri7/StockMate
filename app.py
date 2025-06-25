@@ -278,8 +278,8 @@ def save_data(stock_data):
         for item in stock_data:
             c.execute('''
                 SELECT 1 FROM stocks
-                WHERE counter = ? AND last_price = ? AND change = ? AND volume = ? AND turnover = ?
-                AND timestamp >= datetime('now', '-1 hour')
+                WHERE counter = %s AND last_price = %s AND change = %s AND volume = %s AND turnover = %s
+                AND timestamp >= NOW() - INTERVAL '1 hour'
             ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
             if not c.fetchone():
                 c.execute('''
