@@ -38,7 +38,7 @@ requests_cache.install_cache('mse_cache', expire_after=300)
 
 
 # ========== Configuration ==========
-DATABASE_PATH = os.getenv('DATABASE_PATH) or 'database.db'
+#DATABASE_PATH = os.getenv('DATABASE_PATH) or 'database.db'# Delete ❌
 FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY') or 'fallback-secret-key-for-dev-only'
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') or 'default-dev-password'
 
