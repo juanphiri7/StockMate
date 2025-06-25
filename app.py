@@ -33,15 +33,15 @@ requests_cache.install_cache('mse_cache', expire_after=300)
 
 
 # ========== Configuration ==========
-DATABASE_PATH = os.getenv('DATABASE_PATH', '/app/database.db')
-FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'fallback-secret-key-for-dev-only')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'default-dev-password')
+DATABASE_PATH = os.getenv('DATABASE_PATH) or 'database.db'
+FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY') or 'fallback-secret-key-for-dev-only'
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') or 'default-dev-password'
 
 
 # ========== Validate Environment Variables ==========
 required_vars = ['DATABASE_PATH', 'FLASK_SECRET_KEY', 'ADMIN_PASSWORD']
 for var in required_vars:
-    if not os.getenv(var):
+    if not globals()[var]:
         raise ValueError(f"Environment Variable {var} is not Set")
 
 
