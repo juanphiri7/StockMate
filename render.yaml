@@ -9,7 +9,7 @@ services:
         - key: DATABASE_PATH
           value: /app/database.db
         - key: FLASK_SECRET_KEY
-          python -c "import secrets; print(secrets.token_hex(16))"
+          value: 74a7101016516e67a54d095ee2095d8e
         - key: ADMIN_PASSWORD
           value: StockMateAdmin@47
   buildCommand: pip install -r requirements.txt
