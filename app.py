@@ -24,11 +24,11 @@ from flask import Flask, request, jsonify, render_template_string, redirect, url
 from contextlib import contextmanager
 
 
-# ========== Load Environment Variables ==========
+# ========= Load Environment Variables =========
 load_dotenv()
 
 
-# ========== Set Up Logging 
+# ========== Set Up Logging ==========
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
