@@ -294,7 +294,7 @@ def save_data(stock_data):
                 c.execute('''
                     INSERT INTO stocks (counter, last_price, change, volume, turnover)
                     VALUES (%s,%s,%s,%s,%s)
-                ''', (item['Counter'], float(item['Last Price (MK)']), float(item['% Change']), int(item['Volume']), float(item['Turnover (MK)'])))
+                ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
         conn.commit()
 
 
