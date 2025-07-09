@@ -17,9 +17,9 @@ services:
           value: 74a7101016516e67a54d095ee2095d8e
         - key: ADMIN_PASSWORD
           value: StockMateAdmin@47 
- - type: pgsql
-    name: StockMate_db
-    plan: free
-    databaseName: stockmate_db
-    user: stockmate_db_user  
+- type: pgsql
+  name: StockMate_db
+  plan: free
+  databaseName: stockmate_db
+  user: stockmate_db_user  
 version: "1"
