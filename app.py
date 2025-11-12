@@ -48,16 +48,38 @@ if not DATABASE_URL:
 # ========== FLASK APP and caching ==========
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
+cache = Cache(app, config={"CACHE_TYPE": "simple"})  # replace with Redis in prod
 
+# ========== Database Context Manager and Connection Pool ==========
+_pg_pool = None
 
-# ========== Database Context Manager ==========
+def init_db_pool(minconn=1, maxconn=10):
+    global _pg_pool
+    if _pg_pool is None:
+        logger.info("Initializing DB connection pool...")
+        _pg_pool = pool.SimpleConnectionPool(minconn, maxconn, dsn=DATABASE_URL)
+    return _pg_pool
+
 @contextmanager
 def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
+    """
+    Context manager to get a connection from the pool and automatically return it.
+    Usage:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            ...
+    """
+    global _pg_pool
+    if _pg_pool is None:
+        init_db_pool()
+    conn = _pg_pool.getconn()
     try:
         yield conn
     finally:
-        conn.close()
+        try:
+            _pg_pool.putconn(conn)
+        except Exception:
+            conn.close()
 
 
 # ========== TIMEZONE CONVERTER ==========
