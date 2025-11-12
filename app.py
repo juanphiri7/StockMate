@@ -10,48 +10,42 @@ import atexit
 import signal
 import qrcode
 import logging
-import psycopg2 
 import requests
 import tempfile
 import requests_cache
-from apscheduler.schedulers.background import BackgroundScheduler
-from bs4 import BeautifulSoup
-from fpdf import FPDF
-from dotenv import load_dotenv
-from datetime import datetime
+import psycopg2.extras
 from PIL import Image
-from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file
+from fpdf import FPDF
+from io import BytesIO
+from pathlib import Path
+from datetime import datetime
+from bs4 import BeautifulSoup
+from psycopg2 import pool, sql
+from dotenv import load_dotenv
+from flask_caching import Cache
 from contextlib import contextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
+from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file, Response, abort 
 
 
-# ========= Load Environment Variables =========
+# ========= Load Environment Variables and configure caching =========
 load_dotenv()
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=LOG_LEVEL,
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("stockmate")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY") or "fallback-secret-key-for-dev-only"
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD") or "default-dev-password"
+
+# Validate critical env vars early
+if not DATABASE_URL:
+    logger.error("DATABASE_URL is not set. Exiting.")
+    raise ValueError("DATABASE_URL environment variable is required")
 
 
-# ========== Set Up Logging ==========
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-# ========== Enable Request Caching ==========
-requests_cache.install_cache('mse_cache', expire_after=300)
-
-
-# ========== Configuration ==========
-DATABASE_URL = os.getenv('DATABASE_URL')
-FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY') or 'fallback-secret-key-for-dev-only'
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') or 'default-dev-password'
-
-
-# ========== Validate Environment Variables ==========
-required_vars = ['DATABASE_URL', 'FLASK_SECRET_KEY', 'ADMIN_PASSWORD']
-for var in required_vars:
-    if not globals().get(var):
-        logger.error(f"Environment Variable {var} is Not Set")
-        raise ValueError(f"Environment variable {var} is not Set")
-
-
-# ========== FLASK APP ==========
+# ========== FLASK APP and caching ==========
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
