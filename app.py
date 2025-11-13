@@ -299,10 +299,10 @@ def save_data(stock_data):
     return inserted
 
 
-# ========== API ROUTES ==========
+# ================= API ROUTES =================
 
 # ======= Home Route
-@app.route('/')
+@app.route("/")
 def home():
     return "Hello There! StockMate API is Running!"
 
