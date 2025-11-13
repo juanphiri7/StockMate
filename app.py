@@ -82,7 +82,7 @@ def get_db_connection():
             conn.close()
 
 
-# ========== TIMEZONE CONVERTER ==========
+# ========== TIMEZONE CONVERTER and Utilities ==========
 LOCAL_TZ = pytz.timezone("Africa/Blantyre")  # user's default tz
 
 def convert_to_local_time(utc_dt):
@@ -131,222 +131,172 @@ def normalize_counter(counter):
 
 # ========== DATABASE INIT ==========
 def init_db():
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DROP TABLE IF EXISTS fundamentals')
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS stocks (
-                    id SERIAL PRIMARY KEY,
-                    counter TEXT UNIQUE NOT NULL,
-                    last_price NUMERIC,
-                    change NUMERIC,
-                    volume BIGINT,
-                    turnover NUMERIC,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS fundamentals (
-                    id SERIAL PRIMARY KEY,
-                    counter TEXT UNIQUE NOT NULL,
-                    net_profit NUMERIC,
-                    number_of_shares_in_issue BIGINT,
-                    dividend NUMERIC,
-                    book_value NUMERIC
-                )
-            ''')
-            conn.commit()
-            logger.info("Database Initialized Successfully")
-    except Exception as e:
-        logger.error(f"Error Initializing Database: {str(e)}")
-        raise
+    """Create required tables if missing and add helpful indices."""
+    logger.info("Initializing database schema...")
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS stocks (
+                id SERIAL PRIMARY KEY,
+                counter TEXT NOT NULL,
+                last_price NUMERIC,
+                change_value NUMERIC,
+                volume BIGINT,
+                turnover NUMERIC,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_stocks_counter_ts ON stocks (counter, timestamp DESC);")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS fundamentals (
+                id SERIAL PRIMARY KEY,
+                counter TEXT UNIQUE NOT NULL,
+                net_profit NUMERIC,
+                number_of_shares_in_issue BIGINT,
+                dividend NUMERIC,
+                book_value NUMERIC,
+                report_link TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_fun_counter ON fundamentals (counter);")
+        conn.commit()
+        cur.close()
+    logger.info("Database schema ready.")
 
-def initialize_fundamentals():
-    fundamentals_data = [
-        {
-            "counter": "AIRTEL",
-            "net_profit": "42714422219.62",
-            "number_of_shares_in_issue": "11000000000",
-            "dividend_paid": "21875568000.00",
-            "book_value": "32120000000.00"
-        },
-        {
-            "counter": "BHL",
-            "net_profit": "-1369168339.45",
-            "number_of_shares_in_issue": "5878254935",
-            "dividend_paid": "0.00",
-            "book_value": "65131064679.80"
-        },
-        {
-            "counter": "FDHB",
-            "net_profit": "74055922113.91",
-            "number_of_shares_in_issue": "6901031250",
-            "dividend_paid": "32720549568.75",
-            "book_value": "97373550937.50"
-        },
-        {
-            "counter": "FMBCH",
-            "net_profit": "118254740000.00",
-            "number_of_shares_in_issue": "2458250000",
-            "dividend_paid": "8850053988.00",
-            "book_value": "329085927500.00"
-        },
-        {
-            "counter": "ICON",           
-            "net_profit": "24490000.00",
-            "number_of_shares_in_issue": "6680000000",
-            "dividend_paid": "1942477200.00",
-            "book_value": "146225200000.00"
-        },
-        {
-            "counter": "ILLOVO",
-            "net_profit": "22631873664.47",
-            "number_of_shares_in_issue": "713444391",
-            "dividend_paid": "3578500083.93",
-            "book_value": "148781693299.14"
-        },
-        {
-            "counter": "MPICO",
-            "net_profit": "8535675173.68",
-            "number_of_shares_in_issue": "2298047460",
-            "dividend_paid": "987300938.05",
-            "book_value": "65195606440.20"
-        },
-        {
-            "counter": "NBM",
-            "net_profit": "102283000000.00",
-            "number_of_shares_in_issue": "466931738",
-            "dividend_paid": "59060764860.77",
-            "book_value": "268560458428.08"
-        },
-        {
-            "counter": "NBS",
-            "net_profit": "72978138905.20",
-            "number_of_shares_in_issue": "2910573356",
-            "dividend_paid": "63647021073.80",
-            "book_value": "112057074206.00"
-        },
-        {
-            "counter": "NICO",
-            "net_profit": "72006217688.65",
-            "number_of_shares_in_issue": "1043041096",
-            "dividend_paid": "22981533076.39",
-            "book_value": "155726035632.8"
-        },
-        {
-            "counter": "NITL",
-            "net_profit": "29759480000.00",
-            "number_of_shares_in_issue": "135000000",
-            "dividend_paid": "1715933700.00",
-            "book_value": "73803150000.00"
-        },
-        {
-            "counter": "OMU",
-            "net_profit": "2595650000.00",
-            "number_of_shares_in_issue": "16977551",
-            "dividend_paid": "1404909203.96",
-            "book_value": "19469855486.80"
-        },
-        {
-            "counter": "PCL",
-            "net_profit": "64673000000.00",
-            "number_of_shares_in_issue": "120255820",
-            "dividend_paid": "1346858449.67",
-            "book_value": "348566304502.80"
-        },
-        {
-            "counter": "STANDARD",
-            "net_profit": "86365000000.00",
-            "number_of_shares_in_issue": "234668162",
-            "dividend_paid": "43881111188.97",
-            "book_value": "259843362419.36"
-        },
-        {
-            "counter": "SUNBIRD",
-            "net_profit": "10624630000.00",
-            "number_of_shares_in_issue": "261582580",
-            "dividend_paid": "3396746848.44",
-            "book_value": "69889633724.40"
-        },
-        {
-            "counter": "TNM",
-            "net_profit": "10060000000.00",
-            "number_of_shares_in_issue": "11541200375",
-            "dividend_paid": "0.00",
-            "book_value": "51819989685.90"
-        }
-    ]
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            for entry in fundamentals_data:
-                cursor.execute('''
-                    INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (counter) DO UPDATE
-                    SET net_profit = EXCLUDED.net_profit,
-                        number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
-                        dividend = EXCLUDED.dividend,
-                        book_value = EXCLUDED.book_value
-                ''', (
-                    entry["counter"],
-                    float(entry["net_profit"]),
-                    int(entry["number_of_shares_in_issue"]),
-                    float(entry["dividend_paid"]),
-                    float(entry["book_value"])
-                ))
-            conn.commit()
-            logger.info("Fundamentals initialized successfully")
-    except Exception as e:
-        logger.error(f"Error initializing fundamentals: {str(e)}")
-        raise
+# ========== Initialize sample fundamentals (if you want to seed) ==========
+def initialize_fundamentals_seed(seed_data):
+    """Seed fundamentals; uses UPSERT semantics."""
+    logger.info("Seeding fundamentals (if not present)...")
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        for entry in seed_data:
+            counter = normalize_counter(entry.get("counter"))
+            if not counter:
+                continue
+            net_profit = safe_float(entry.get("net_profit"))
+            shares = safe_int(entry.get("number_of_shares_in_issue"))
+            dividend = safe_float(entry.get("dividend_paid") or entry.get("dividend"))
+            book_value = safe_float(entry.get("book_value"))
+            cur.execute("""
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (counter)
+                DO UPDATE SET
+                    net_profit = EXCLUDED.net_profit,
+                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
+                    dividend = EXCLUDED.dividend,
+                    book_value = EXCLUDED.book_value,
+                    updated_at = CURRENT_TIMESTAMP;
+            """, (counter, net_profit, shares, dividend, book_value))
+        conn.commit()
+        cur.close()
+    logger.info("Seeding done.")
 
 
-# ========== SCRAPE ==========
+# ==================== SCRAPE ====================
+HEADERS = {"User-Agent": "Mozilla/5.0 (StockMate Bot)"}
+requests.adapters.DEFAULT_RETRIES = 2
+
+def parse_price_cell(text):
+    """Return numeric last price or None."""
+    return safe_float(text)
+
+def parse_change_cell(text):
+    return safe_float(text)
+
+def parse_volume_cell(text):
+    # volume is often integer, may include commas
+    return safe_int(text)
+
+def parse_turnover_cell(text):
+    return safe_float(text)
+
 def scrape_mse():
-    url = 'https://www.mse.co.mw/'
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    """
+    Scrape the MSE homepage table of counters.
+    Returns a list of dicts with normalized values.
+    Cached at function level for a short time via flask-cache on caller.
+    """
+    url = "https://www.mse.co.mw/"
     try:
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        table = soup.find('table')
-        data = []
-        if not table:
-            return []
-        rows = table.find_all('tr')
-        for row in rows[1:]:
-            cols = row.find_all('td')
-            if len(cols) >= 5:
-                data.append({
-                    'Counter': cols[0].text.strip(),
-                    'Last Price (MK)': cols[1].text.strip(),
-                    '% Change': cols[2].text.strip(),
-                    'Volume': cols[3].text.strip(),
-                    'Turnover (MK)': cols[4].text.strip()
-                })
-        return data
+        resp = requests.get(url, headers=HEADERS, timeout=10)
+        resp.raise_for_status()
     except Exception as e:
-        print("Scraping Error:", e)
+        logger.error("Failed to fetch MSE page: %s", e)
         return []
 
+    soup = BeautifulSoup(resp.content, "html.parser")
+    table = soup.find("table")
+    if not table:
+        logger.warning("No table found on MSE page.")
+        return []
 
-# ========== SAVE ==========
+    data = []
+    rows = table.find_all("tr")
+    for row in rows[1:]:
+        cols = row.find_all("td")
+        if len(cols) < 5:
+            continue
+        raw_counter = cols[0].get_text(strip=True)
+        counter = normalize_counter(raw_counter)
+        if not counter:
+            continue
+
+        last_price = parse_price_cell(cols[1].get_text(strip=True))
+        change_val = parse_change_cell(cols[2].get_text(strip=True))
+        volume = parse_volume_cell(cols[3].get_text(strip=True))
+        turnover = parse_turnover_cell(cols[4].get_text(strip=True))
+
+        data.append({
+            "counter": counter,
+            "last_price": last_price,
+            "change": change_val,
+            "volume": volume,
+            "turnover": turnover
+        })
+    logger.info("Scraped %d counters from MSE", len(data))
+    return data
+
+
+# ==================== SAVE ====================
 def save_data(stock_data):
+    """
+    Insert fetched stock rows into the DB if the last record for this counter
+    (within the last hour) is different.
+    """
+    if not stock_data:
+        return 0
+    inserted = 0
     with get_db_connection() as conn:
-        c = conn.cursor()
+        cur = conn.cursor()
         for item in stock_data:
-            c.execute('''
+            counter = item.get("counter")
+            last_price = item.get("last_price")
+            change_val = item.get("change")
+            volume = item.get("volume")
+            turnover = item.get("turnover")
+            # Avoid saving if the most recent row (within 1 hour) matches these values
+            cur.execute("""
                 SELECT 1 FROM stocks
-                WHERE counter = %s AND last_price = %s AND change = %s AND volume = %s AND turnover = %s
-                AND timestamp >= NOW() - INTERVAL '1 hour'
-            ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
-            if not c.fetchone():
-                c.execute('''
-                    INSERT INTO stocks (counter, last_price, change, volume, turnover)
-                    VALUES (%s,%s,%s,%s,%s)
-                ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+                WHERE counter = %s
+                  AND COALESCE(last_price::text, '') = COALESCE(%s::text, '')
+                  AND COALESCE(change_value::text, '') = COALESCE(%s::text, '')
+                  AND COALESCE(volume::text, '') = COALESCE(%s::text, '')
+                  AND COALESCE(turnover::text, '') = COALESCE(%s::text, '')
+                  AND timestamp >= NOW() - INTERVAL '1 hour';
+            """, (counter, last_price, change_val, volume, turnover))
+            if cur.fetchone():
+                continue
+            cur.execute("""
+                INSERT INTO stocks (counter, last_price, change_value, volume, turnover)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (counter, last_price, change_val, volume, turnover))
+            inserted += 1
         conn.commit()
+        cur.close()
+    logger.info("Saved %d new stock rows", inserted)
+    return inserted
 
 
 # ========== API ROUTES ==========
