@@ -83,15 +83,50 @@ def get_db_connection():
 
 
 # ========== TIMEZONE CONVERTER ==========
-def convert_to_local_time(utc_time_str):
+LOCAL_TZ = pytz.timezone("Africa/Blantyre")  # user's default tz
+
+def convert_to_local_time(utc_dt):
+    if not utc_dt:
+        return None
+    if isinstance(utc_dt, str):
+        try:
+            utc_dt = datetime.strptime(utc_dt, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return utc_dt
+    if utc_dt.tzinfo is None:
+        # assume UTC if naive
+        utc_dt = pytz.utc.localize(utc_dt)
+    return utc_dt.astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S")
+
+def safe_float(value):
+    if value is None:
+        return None
     try:
-        utc = pytz.utc
-        local = pytz.timezone('Africa/Blantyre')  # GMT+2
-        utc_dt = datetime.strptime(utc_time_str, '%Y-%m-%d %H:%M:%S')
-        local_dt = utc.localize(utc_dt).astimezone(local)
-        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
-    except:
-        return utc_time_str 
+        if isinstance(value, (int, float)):
+            return float(value)
+        s = str(value).replace(",", "").replace("MK", "").replace("%", "").strip()
+        # remove any non-digit except dot and minus
+        s = re.sub(r"[^\d\.\-]", "", s)
+        return float(s) if s != "" else None
+    except Exception:
+        return None
+
+def safe_int(value):
+    if value is None:
+        return None
+    try:
+        if isinstance(value, int):
+            return value
+        s = str(value).replace(",", "").strip()
+        s = re.sub(r"[^\d\-]", "", s)
+        return int(s) if s != "" else None
+    except Exception:
+        return None
+
+def normalize_counter(counter):
+    if not counter:
+        return None
+    return re.sub(r"[^A-Z0-9]", "", counter.upper())
         
 
 # ========== DATABASE INIT ==========
