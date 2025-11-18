@@ -308,202 +308,251 @@ def home():
 
 
 # ======= Scrape Route
-@app.route('/scrape', methods=['GET'])
+@app.route("/scrape", methods=["GET"])
 def scrape_and_save():
     data = scrape_mse()
-    if data:
-        save_data(data)
-        return jsonify({"message": "Success!! Data Scraped and Saved", "count": len(data)})
-    else:
+    if not data:
         return jsonify({"error": "Failed to scrape data"}), 500
+    count = save_data(data)
+    return jsonify({"message": "Success! Data scraped and saved", "scraped": len(data), "inserted": count})
 
 
 # ======= Stocks Route
-@app.route('/stocks', methods=['GET'])
+@app.route("/stocks", methods=["GET"])
 def get_stocks():
+    limit = int(request.args.get("limit", 20))
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT counter, last_price, change, volume, turnover, timestamp FROM stocks ORDER BY timestamp DESC LIMIT 20')
-        rows = cursor.fetchall()
-        return jsonify([
-            {"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])}
-            for r in rows
-        ])
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT counter, last_price, change_value, volume, turnover, timestamp
+            FROM stocks
+            ORDER BY timestamp DESC
+            LIMIT %s
+        """, (limit,))
+        rows = cur.fetchall()
+        cur.close()
+    return jsonify([
+        {
+            "counter": r[0],
+            "last_price": float(r[1]) if r[1] is not None else None,
+            "change": float(r[2]) if r[2] is not None else None,
+            "volume": int(r[3]) if r[3] is not None else None,
+            "turnover": float(r[4]) if r[4] is not None else None,
+            "timestamp": convert_to_local_time(r[5])
+        } for r in rows
+    ])
 
 
 # ======= Latest Prices Route
-@app.route('/latest_prices', methods=['GET'])
+@app.route("/latest_prices", methods=["GET"])
+@cache.cached(timeout=120)
 def latest_prices():
     with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT counter, last_price, change, volume, turnover, MAX(timestamp)
-            FROM stocks
-            GROUP BY counter
-        ''')
-        rows = cursor.fetchall()
-        return jsonify([
-            {"counter": r[0], "last_price": r[1], "change": r[2], "volume": r[3], "turnover": r[4], "timestamp": convert_to_local_time(r[5])}
-            for r in rows
-        ])
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT s.counter, s.last_price, s.change_value, s.volume, s.turnover, MAX(s.timestamp)
+            FROM stocks s
+            GROUP BY s.counter, s.last_price, s.change_value, s.volume, s.turnover
+        """)
+        rows = cur.fetchall()
+        cur.close()
+    results = []
+    for r in rows:
+        results.append({
+            "counter": r[0],
+            "last_price": float(r[1]) if r[1] is not None else None,
+            "change": float(r[2]) if r[2] is not None else None,
+            "volume": int(r[3]) if r[3] is not None else None,
+            "turnover": float(r[4]) if r[4] is not None else None,
+            "timestamp": convert_to_local_time(r[5])
+        })
+    return jsonify(results)
 
 
 # ======= History Route
-@app.route('/history/<counter>', methods=['GET'])
+@app.route("/history/<counter>", methods=["GET"])
 def get_history(counter):
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT timestamp, last_price
-                FROM stocks
-                WHERE counter = %s
-                ORDER BY timestamp DESC
-                LIMIT 10
-            ''', (counter,))
-            rows = cursor.fetchall()
-        history = [
-            {
-                "date": convert_to_local_time(row[0]),
-                "price": float(str(row[1]).replace(',', '')) if row[1] else None
-            } for row in rows
-        ]
-        return jsonify(history[::-1] if request.args.get('order') == 'asc' else history)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    counter = normalize_counter(counter)
+    limit = int(request.args.get("limit", 10))
+    order = request.args.get("order", "desc").lower()
+    if not counter:
+        return jsonify({"error": "Invalid counter"}), 400
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT timestamp, last_price
+            FROM stocks
+            WHERE counter = %s
+            ORDER BY timestamp DESC
+            LIMIT %s
+        """, (counter, limit))
+        rows = cur.fetchall()
+        cur.close()
+    history = [{"date": convert_to_local_time(r[0]), "price": float(r[1]) if r[1] is not None else None} for r in rows]
+    if order == "asc":
+        history = list(reversed(history))
+    return jsonify(history)
+            
 
 
 # ======= Insert Fundamentals 
-@app.route('/insert_fundamentals', methods=['POST'])
+@app.route("/insert_fundamentals", methods=["POST"])
 def insert_fundamentals():
+    if not request.json:
+        return jsonify({"error": "No JSON payload provided"}), 400
     data = request.json
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
+    if not isinstance(data, list):
+        return jsonify({"error": "Payload must be a list of fundamentals objects"}), 400
     with get_db_connection() as conn:
-        c = conn.cursor()
+        cur = conn.cursor()
         for entry in data:
-            c.execute('''
-                INSERT OR REPLACE INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-                VALUES (%s,%s,%s,%s,%s)
-            ''', (
-                entry['counter'],
-                float(str(entry['net_profit']).replace(',', '')),
-                float(str(entry['number_of_shares_in_issue']).replace(',', '')),
-                float(str(entry['dividend_paid']).replace(',', '')),
-                float(str(entry['book_value']).replace(',', ''))
-            ))
+            counter = normalize_counter(entry.get("counter"))
+            if not counter:
+                continue
+            net_profit = safe_float(entry.get("net_profit"))
+            shares = safe_int(entry.get("number_of_shares_in_issue"))
+            dividend = safe_float(entry.get("dividend_paid") or entry.get("dividend"))
+            book_value = safe_float(entry.get("book_value"))
+            report_link = entry.get("report_link")
+            cur.execute("""
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value, report_link)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (counter)
+                DO UPDATE SET
+                    net_profit = EXCLUDED.net_profit,
+                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
+                    dividend = EXCLUDED.dividend,
+                    book_value = EXCLUDED.book_value,
+                    report_link = COALESCE(EXCLUDED.report_link, fundamentals.report_link),
+                    updated_at = CURRENT_TIMESTAMP;
+            """, (counter, net_profit, shares, dividend, book_value, report_link))
         conn.commit()
-    return jsonify({"message": "Fundamentals inserted successfully"})
+        cur.close()
+    return jsonify({"message": "Fundamentals inserted/updated successfully"})
 
 
 # ======= Fundamentals Route
-@app.route('/fundamentals/<counter>', methods=['GET'])
+@app.route("/fundamentals/<counter>", methods=["GET"])
 def get_fundamentals(counter):
-    counter = counter.upper()
+    counter = normalize_counter(counter)
+    if not counter:
+        return jsonify({"error": "Invalid counter"}), 400
     try:
         with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-                FROM fundamentals WHERE counter = %s
-            ''', (counter,))
-            row = cursor.fetchone()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT net_profit, number_of_shares_in_issue, dividend, book_value
+                FROM fundamentals
+                WHERE counter = %s
+            """, (counter,))
+            row = cur.fetchone()
+            cur.close()
         if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
-        net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
-        net_profit = float(str(net_profit).replace(',', '')) if net_profit else 0
-        shares = float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
-        dividend = float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
-        book_value = float(str(book_value).replace(',', '')) if book_value else 0
+        net_profit, shares, dividend, book_value = row
+        net_profit = safe_float(net_profit) or 0
+        shares = safe_int(shares) or 0
+        dividend = safe_float(dividend) or 0
+        book_value = safe_float(book_value) or 0
 
         eps = net_profit / shares if shares else 0
         bvps = book_value / shares if shares else 0
         dvps = dividend / shares if shares else 0
 
+        # latest price
         with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
+            cur = conn.cursor()
+            cur.execute("""
                 SELECT last_price FROM stocks
                 WHERE counter = %s
                 ORDER BY timestamp DESC
                 LIMIT 1
-            ''', (counter,))
-            result = cursor.fetchone()
-        if not result:
+            """, (counter,))
+            res = cur.fetchone()
+            cur.close()
+        if not res:
             return jsonify({"error": "Price data not available"}), 404
+        price = safe_float(res[0]) or 0
 
-        price = float(str(result[0]).replace(',', '')) if result[0] else 0
-        pe_ratio = price / eps if eps else None
-        pb_ratio = price / bvps if bvps else None
-        div_yield = (dvps / price) * 100 if price and dvps else None
-
-        return jsonify({
-            "eps": f"{eps:.2f}",
-            "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
-            "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
-            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A"
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ======= Metrics Route
-@app.route('/metrics/<counter>', methods=['GET'])
-def stock_metrics(counter):
-    counter = counter.upper()
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-                FROM fundamentals WHERE counter = %s
-            ''', (counter,))
-            row = cursor.fetchone()
-        if not row:
-            return jsonify({"error": "Data not available for this company"}), 404
-
-        net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
-        net_profit = float(str(net_profit).replace(',', '')) if net_profit else 0
-        shares = float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
-        dividend = float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
-        book_value = float(str(book_value).replace(',', '')) if book_value else 0
-
-        eps = net_profit / shares if shares else 0
-        bvps = book_value / shares if shares else 0
-        dvps = dividend / shares if shares else 0
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT last_price, change, volume, turnover, timestamp
-                FROM stocks
-                WHERE counter = %s
-                ORDER BY timestamp DESC
-                LIMIT 1
-            ''', (counter,))
-            result = cursor.fetchone()
-        if not result:
-            return jsonify({"error": "Latest Price data not found"}), 404
-
-        price = float(str(result[0]).replace(',', '')) if result[0] else 0
         pe_ratio = price / eps if eps else None
         pb_ratio = price / bvps if bvps else None
         div_yield = (dvps / price) * 100 if price and dvps else None
 
         return jsonify({
             "counter": counter,
-            "last_price": f"{price:.2f}",
-            "change": result[1],
-            "volume": result[2],
-            "turnover": result[3],
-            "timestamp": convert_to_local_time(result[4]),
-            "eps": f"{eps:.2f}",
-            "pe_ratio": f"{pe_ratio:.2f}" if pe_ratio else "N/A",
-            "pb_ratio": f"{pb_ratio:.2f}" if pb_ratio else "N/A",
-            "div_yield": f"{div_yield:.2f}%" if div_yield else "N/A"
+            "eps": round(eps, 4),
+            "pe_ratio": round(pe_ratio, 4) if pe_ratio is not None else None,
+            "pb_ratio": round(pb_ratio, 4) if pb_ratio is not None else None,
+            "div_yield_percent": round(div_yield, 4) if div_yield is not None else None,
+            "price": round(price, 4)
         })
     except Exception as e:
+        logger.exception("Error computing fundamentals for %s", counter)
+        return jsonify({"error": str(e)}), 500
+
+
+# ======= Metrics Route
+@app.route("/metrics/<counter>", methods=["GET"])
+def stock_metrics(counter):
+    counter = normalize_counter(counter)
+    if not counter:
+        return jsonify({"error": "Invalid counter"}), 400
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT net_profit, number_of_shares_in_issue, dividend, book_value, report_link
+                FROM fundamentals WHERE counter = %s
+            """, (counter,))
+            fund = cur.fetchone()
+            cur.close()
+        if not fund:
+            return jsonify({"error": "Fundamentals not available"}), 404
+
+        net_profit, shares, dividend, book_value, report_link = fund
+        net_profit = safe_float(net_profit) or 0
+        shares = safe_int(shares) or 0
+        dividend = safe_float(dividend) or 0
+        book_value = safe_float(book_value) or 0
+
+        eps = net_profit / shares if shares else 0
+        bvps = book_value / shares if shares else 0
+        dvps = dividend / shares if shares else 0
+
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT last_price, change_value, volume, turnover, timestamp
+                FROM stocks WHERE counter = %s
+                ORDER BY timestamp DESC LIMIT 1
+            """, (counter,))
+            latest = cur.fetchone()
+            cur.close()
+        if not latest:
+            return jsonify({"error": "Latest price data not found"}), 404
+
+        price, change_val, volume, turnover, ts = latest
+        price = safe_float(price) or 0
+        pe_ratio = price / eps if eps else None
+        pb_ratio = price / bvps if bvps else None
+        div_yield = (dvps / price) * 100 if price and dvps else None
+
+        return jsonify({
+            "counter": counter,
+            "last_price": round(price, 4),
+            "change": round(safe_float(change_val) or 0, 4),
+            "volume": int(volume) if volume else None,
+            "turnover": round(turnover, 4) if turnover else None,
+            "timestamp": convert_to_local_time(ts),
+            "eps": round(eps, 4),
+            "pe_ratio": round(pe_ratio, 4) if pe_ratio is not None else None,
+            "pb_ratio": round(pb_ratio, 4) if pb_ratio is not None else None,
+            "div_yield_percent": round(div_yield, 4) if div_yield is not None else None,
+            "report_link": report_link
+        })
+    except Exception as e:
+        logger.exception("Error computing metrics")
         return jsonify({"error": str(e)}), 500
 
 
