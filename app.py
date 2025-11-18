@@ -742,18 +742,71 @@ def admin_login():
 # ========== Admin Dashboard Route
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    if not session.get('logged_in'):
-        return redirect(url_for('admin_login'))
-    try:
-        with open('fundamentals.json') as f:
-            data = json.load(f)
-    except:
-        data = {}
-    html = "<h2>Company Fundamentals</h2><ul>"
-    for k in sorted(data.keys()):
-        html += f"<li><strong>{k}</strong> — <a href='/admin/edit/{k}'>Edit</a></li>"
+    if not session.get("logged_in"):
+        return redirect(url_for("admin_login"))
+    # list fundamentals in DB
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT counter, net_profit, number_of_shares_in_issue, dividend, book_value, report_link FROM fundamentals ORDER BY counter")
+        rows = cur.fetchall()
+        cur.close()
+    html = "<h2>Company Fundamentals (DB)</h2><ul>"
+    for r in rows:
+        html += f"<li><strong>{r[0]}</strong> — <a href='/admin/edit/{r[0]}'>Edit</a></li>"
     html += "</ul>"
+    html += "<p><a href='/admin/add'>Add new company</a></p>"
     return html
+
+
+# ========== Admin Add Company Route
+@app.route("/admin/add", methods=["GET", "POST"])
+def admin_add():
+    if not session.get("logged_in"):
+        return redirect(url_for("admin_login"))
+    if request.method == "POST":
+        payload = {
+            "counter": request.form.get("counter"),
+            "net_profit": request.form.get("net_profit"),
+            "number_of_shares_in_issue": request.form.get("number_of_shares_in_issue"),
+            "dividend_paid": request.form.get("dividend_paid"),
+            "book_value": request.form.get("book_value"),
+            "report_link": request.form.get("report_link")
+        }
+        # Use insert_fundamentals logic (single item)
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            counter = normalize_counter(payload["counter"])
+            if not counter:
+                return "Invalid counter", 400
+            cur.execute("""
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value, report_link)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (counter) DO UPDATE
+                SET net_profit = EXCLUDED.net_profit,
+                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
+                    dividend = EXCLUDED.dividend,
+                    book_value = EXCLUDED.book_value,
+                    report_link = COALESCE(EXCLUDED.report_link, fundamentals.report_link),
+                    updated_at = CURRENT_TIMESTAMP;
+            """, (counter, safe_float(payload["net_profit"]), safe_int(payload["number_of_shares_in_issue"]),
+                  safe_float(payload["dividend_paid"]), safe_float(payload["book_value"]), payload["report_link"]))
+            conn.commit()
+            cur.close()
+        return redirect(url_for("admin_dashboard"))
+    return render_template_string("""
+        <h2>Add Company Fundamentals</h2>
+        <form method="POST">
+            Counter: <input name="counter"/><br/>
+            Net Profit: <input name="net_profit"/><br/>
+            Number of Shares: <input name="number_of_shares_in_issue"/><br/>
+            Dividend Paid: <input name="dividend_paid"/><br/>
+            Book Value: <input name="book_value"/><br/>
+            Report Link (optional): <input name="report_link"/><br/>
+            <button type="submit">Save</button>
+        </form>
+        <a href="/admin/dashboard">← Back</a>
+    """)
+
 
 
 # ========== Admin Edit Company Route
