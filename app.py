@@ -808,7 +808,6 @@ def admin_add():
     """)
 
 
-
 # ========== Admin Edit Company Route
 @app.route("/admin/edit/<company>", methods=["GET", "POST"])
 def edit_company(company):
@@ -849,7 +848,8 @@ def edit_company(company):
         </form>
         <a href="/admin/dashboard">← Back to dashboard</a>
     """)
-    
+ 
+   
 # ========== SCHEDULER ==========
 scheduler = BackgroundScheduler()
 
@@ -870,7 +870,7 @@ def shutdown_scheduler(*args):
     logger.info("Scheduler shut down Gracefully")
 
 
-# ========== App startup ==========
+# ========== App Startup ==========
 def start_services():
     init_db_pool()
     init_db()
