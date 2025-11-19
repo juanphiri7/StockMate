@@ -139,8 +139,8 @@ def init_db():
             CREATE TABLE IF NOT EXISTS stocks (
                 id SERIAL PRIMARY KEY,
                 counter TEXT NOT NULL,
-                last_price NUMERIC,
-                change_value NUMERIC,
+                price NUMERIC,
+                change NUMERIC,
                 volume BIGINT,
                 turnover NUMERIC,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -153,7 +153,7 @@ def init_db():
                 counter TEXT UNIQUE NOT NULL,
                 net_profit NUMERIC,
                 number_of_shares_in_issue BIGINT,
-                dividend NUMERIC,
+                dividend_paid NUMERIC,
                 book_value NUMERIC,
                 report_link TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -176,16 +176,16 @@ def initialize_fundamentals_seed(seed_data):
                 continue
             net_profit = safe_float(entry.get("net_profit"))
             shares = safe_int(entry.get("number_of_shares_in_issue"))
-            dividend = safe_float(entry.get("dividend_paid") or entry.get("dividend"))
+            dividend = safe_float(entry.get("dividend_paid"))
             book_value = safe_float(entry.get("book_value"))
             cur.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
                 VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (counter)
                 DO UPDATE SET
                     net_profit = EXCLUDED.net_profit,
-                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
-                    dividend = EXCLUDED.dividend,
+                    shares = EXCLUDED.number_of_shares_in_issue,
+                    dividend = EXCLUDED.dividend_paid,
                     book_value = EXCLUDED.book_value,
                     updated_at = CURRENT_TIMESTAMP;
             """, (counter, net_profit, shares, dividend, book_value))
@@ -250,7 +250,7 @@ def scrape_mse():
 
         data.append({
             "counter": counter,
-            "last_price": last_price,
+            "price": last_price,
             "change": change_val,
             "volume": volume,
             "turnover": turnover
@@ -272,7 +272,7 @@ def save_data(stock_data):
         cur = conn.cursor()
         for item in stock_data:
             counter = item.get("counter")
-            last_price = item.get("last_price")
+            last_price = item.get("price")
             change_val = item.get("change")
             volume = item.get("volume")
             turnover = item.get("turnover")
@@ -280,8 +280,8 @@ def save_data(stock_data):
             cur.execute("""
                 SELECT 1 FROM stocks
                 WHERE counter = %s
-                  AND COALESCE(last_price::text, '') = COALESCE(%s::text, '')
-                  AND COALESCE(change_value::text, '') = COALESCE(%s::text, '')
+                  AND COALESCE(price::text, '') = COALESCE(%s::text, '')
+                  AND COALESCE(change::text, '') = COALESCE(%s::text, '')
                   AND COALESCE(volume::text, '') = COALESCE(%s::text, '')
                   AND COALESCE(turnover::text, '') = COALESCE(%s::text, '')
                   AND timestamp >= NOW() - INTERVAL '1 hour';
@@ -289,7 +289,7 @@ def save_data(stock_data):
             if cur.fetchone():
                 continue
             cur.execute("""
-                INSERT INTO stocks (counter, last_price, change_value, volume, turnover)
+                INSERT INTO stocks (counter, price, change, volume, turnover)
                 VALUES (%s, %s, %s, %s, %s)
             """, (counter, last_price, change_val, volume, turnover))
             inserted += 1
@@ -324,7 +324,7 @@ def get_stocks():
     with get_db_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT counter, last_price, change_value, volume, turnover, timestamp
+            SELECT counter, price, change, volume, turnover, timestamp
             FROM stocks
             ORDER BY timestamp DESC
             LIMIT %s
@@ -334,7 +334,7 @@ def get_stocks():
     return jsonify([
         {
             "counter": r[0],
-            "last_price": float(r[1]) if r[1] is not None else None,
+            "price": float(r[1]) if r[1] is not None else None,
             "change": float(r[2]) if r[2] is not None else None,
             "volume": int(r[3]) if r[3] is not None else None,
             "turnover": float(r[4]) if r[4] is not None else None,
@@ -350,9 +350,9 @@ def latest_prices():
     with get_db_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT s.counter, s.last_price, s.change_value, s.volume, s.turnover, MAX(s.timestamp)
+            SELECT s.counter, s.price, s.change, s.volume, s.turnover, MAX(s.timestamp)
             FROM stocks s
-            GROUP BY s.counter, s.last_price, s.change_value, s.volume, s.turnover
+            GROUP BY s.counter, s.price, s.change, s.volume, s.turnover
         """)
         rows = cur.fetchall()
         cur.close()
@@ -360,7 +360,7 @@ def latest_prices():
     for r in rows:
         results.append({
             "counter": r[0],
-            "last_price": float(r[1]) if r[1] is not None else None,
+            "price": float(r[1]) if r[1] is not None else None,
             "change": float(r[2]) if r[2] is not None else None,
             "volume": int(r[3]) if r[3] is not None else None,
             "turnover": float(r[4]) if r[4] is not None else None,
@@ -380,7 +380,7 @@ def get_history(counter):
     with get_db_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT timestamp, last_price
+            SELECT timestamp, price
             FROM stocks
             WHERE counter = %s
             ORDER BY timestamp DESC
@@ -411,17 +411,17 @@ def insert_fundamentals():
                 continue
             net_profit = safe_float(entry.get("net_profit"))
             shares = safe_int(entry.get("number_of_shares_in_issue"))
-            dividend = safe_float(entry.get("dividend_paid") or entry.get("dividend"))
+            dividend = safe_float(entry.get("dividend_paid"))
             book_value = safe_float(entry.get("book_value"))
             report_link = entry.get("report_link")
             cur.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value, report_link)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (counter)
                 DO UPDATE SET
                     net_profit = EXCLUDED.net_profit,
-                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
-                    dividend = EXCLUDED.dividend,
+                    shares = EXCLUDED.number_of_shares_in_issue,
+                    dividend = EXCLUDED.dividend_paid,
                     book_value = EXCLUDED.book_value,
                     report_link = COALESCE(EXCLUDED.report_link, fundamentals.report_link),
                     updated_at = CURRENT_TIMESTAMP;
@@ -441,7 +441,7 @@ def get_fundamentals(counter):
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("""
-                SELECT net_profit, number_of_shares_in_issue, dividend, book_value
+                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
                 FROM fundamentals
                 WHERE counter = %s
             """, (counter,))
@@ -464,7 +464,7 @@ def get_fundamentals(counter):
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("""
-                SELECT last_price FROM stocks
+                SELECT price FROM stocks
                 WHERE counter = %s
                 ORDER BY timestamp DESC
                 LIMIT 1
@@ -502,7 +502,7 @@ def stock_metrics(counter):
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("""
-                SELECT net_profit, number_of_shares_in_issue, dividend, book_value, report_link
+                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link
                 FROM fundamentals WHERE counter = %s
             """, (counter,))
             fund = cur.fetchone()
@@ -523,7 +523,7 @@ def stock_metrics(counter):
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("""
-                SELECT last_price, change_value, volume, turnover, timestamp
+                SELECT last_price, change, volume, turnover, timestamp
                 FROM stocks WHERE counter = %s
                 ORDER BY timestamp DESC LIMIT 1
             """, (counter,))
