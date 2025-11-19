@@ -227,7 +227,7 @@ def scrape_mse():
         return []
 
     soup = BeautifulSoup(resp.content, "html.parser")
-    table = soup.find("table")
+    table = soup.find("table", {"class": "table"})
     if not table:
         logger.warning("No table found on MSE page.")
         return []
@@ -351,7 +351,7 @@ def latest_prices():
         cur = conn.cursor()
         cur.execute("""
             SELECT s.counter, s.price, s.change, s.volume, s.turnover, MAX(s.timestamp)
-            FROM stocks s
+            FROM stocks AS s
             GROUP BY s.counter, s.price, s.change, s.volume, s.turnover
         """)
         rows = cur.fetchall()
