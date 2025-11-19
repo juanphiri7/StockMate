@@ -523,7 +523,7 @@ def stock_metrics(counter):
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("""
-                SELECT last_price, change, volume, turnover, timestamp
+                SELECT price, change, volume, turnover, timestamp
                 FROM stocks WHERE counter = %s
                 ORDER BY timestamp DESC LIMIT 1
             """, (counter,))
@@ -540,7 +540,7 @@ def stock_metrics(counter):
 
         return jsonify({
             "counter": counter,
-            "last_price": round(price, 4),
+            "price": round(price, 4),
             "change": round(safe_float(change_val) or 0, 4),
             "volume": int(volume) if volume else None,
             "turnover": round(turnover, 4) if turnover else None,
@@ -624,7 +624,7 @@ def fundamentals_report(counter):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT last_price FROM stocks
+                SELECT price FROM stocks
                 WHERE counter = %s
                 ORDER BY timestamp DESC LIMIT 1
             ''', (counter,))
@@ -747,7 +747,7 @@ def admin_dashboard():
     # list fundamentals in DB
     with get_db_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT counter, net_profit, number_of_shares_in_issue, dividend, book_value, report_link FROM fundamentals ORDER BY counter")
+        cur.execute("SELECT counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link FROM fundamentals ORDER BY counter")
         rows = cur.fetchall()
         cur.close()
     html = "<h2>Company Fundamentals (DB)</h2><ul>"
@@ -779,12 +779,12 @@ def admin_add():
             if not counter:
                 return "Invalid counter", 400
             cur.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend, book_value, report_link)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (counter) DO UPDATE
                 SET net_profit = EXCLUDED.net_profit,
-                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
-                    dividend = EXCLUDED.dividend,
+                    shares = EXCLUDED.number_of_shares_in_issue,
+                    dividend = EXCLUDED.dividend_paid,
                     book_value = EXCLUDED.book_value,
                     report_link = COALESCE(EXCLUDED.report_link, fundamentals.report_link),
                     updated_at = CURRENT_TIMESTAMP;
@@ -820,7 +820,7 @@ def edit_company(company):
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("""
-                UPDATE fundamentals SET net_profit=%s, number_of_shares_in_issue=%s, dividend=%s, book_value=%s, report_link=%s, updated_at=CURRENT_TIMESTAMP
+                UPDATE fundamentals SET net_profit=%s, number_of_shares_in_issue=%s, dividend_paid=%s, book_value=%s, report_link=%s, updated_at=CURRENT_TIMESTAMP
                 WHERE counter=%s
             """, (safe_float(request.form.get("net_profit")), safe_int(request.form.get("number_of_shares_in_issue")),
                   safe_float(request.form.get("dividend_paid")), safe_float(request.form.get("book_value")),
@@ -830,7 +830,7 @@ def edit_company(company):
         return redirect(url_for("admin_dashboard"))
     with get_db_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT net_profit, number_of_shares_in_issue, dividend, book_value, report_link FROM fundamentals WHERE counter=%s", (company,))
+        cur.execute("SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link FROM fundamentals WHERE counter=%s", (company,))
         row = cur.fetchone()
         cur.close()
     vals = {"net_profit": "", "number_of_shares_in_issue": "", "dividend_paid": "", "book_value": "", "report_link": ""}
