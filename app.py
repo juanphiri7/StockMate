@@ -810,63 +810,82 @@ def admin_add():
 
 
 # ========== Admin Edit Company Route
-@app.route('/admin/edit/<company>', methods=['GET', 'POST'])
+@app.route("/admin/edit/<company>", methods=["GET", "POST"])
 def edit_company(company):
-    if not session.get('logged_in'):
-        return redirect(url_for('admin_login'))
-    company = company.upper()
-    try:
-        with open('fundamentals.json') as f:
-            data = json.load(f)
-    except:
-        data = {}
-    if request.method == 'POST':
-        data[company] = {
-            "net_profit": request.form['net_profit'],
-            "number_of_shares_in_issue": request.form['number_of_shares_in_issue'],
-            "dividend_paid": request.form['dividend_paid'],
-            "book_value": request.form['book_value']
-        }
-        with open('fundamentals.json', 'w') as f:
-            json.dump(data, f, indent=2)
-        return redirect(url_for('admin_dashboard'))
-    values = data.get(company, {"net_profit":"", "number_of_shares_in_issue":"", "dividend_paid":"", "book_value":""})
+    if not session.get("logged_in"):
+        return redirect(url_for("admin_login"))
+    company = normalize_counter(company)
+    if not company:
+        return "Invalid company", 400
+    if request.method == "POST":
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE fundamentals SET net_profit=%s, number_of_shares_in_issue=%s, dividend=%s, book_value=%s, report_link=%s, updated_at=CURRENT_TIMESTAMP
+                WHERE counter=%s
+            """, (safe_float(request.form.get("net_profit")), safe_int(request.form.get("number_of_shares_in_issue")),
+                  safe_float(request.form.get("dividend_paid")), safe_float(request.form.get("book_value")),
+                  request.form.get("report_link"), company))
+            conn.commit()
+            cur.close()
+        return redirect(url_for("admin_dashboard"))
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT net_profit, number_of_shares_in_issue, dividend, book_value, report_link FROM fundamentals WHERE counter=%s", (company,))
+        row = cur.fetchone()
+        cur.close()
+    vals = {"net_profit": "", "number_of_shares_in_issue": "", "dividend_paid": "", "book_value": "", "report_link": ""}
+    if row:
+        vals["net_profit"], vals["number_of_shares_in_issue"], vals["dividend_paid"], vals["book_value"], vals["report_link"] = row
     return render_template_string(f"""
         <h2>Edit Fundamentals for {company}</h2>
         <form method="POST">
-            Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>
-            Number of Shares Issued: <input name="number_of_shares_in_issue" value="{values['number_of_shares_in_issue']}"/><br>
-            Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>
-            Book Value: <input name="book_value" value="{values['book_value']}"/><br>
+            Net Profit: <input name="net_profit" value="{vals['net_profit']}"/><br>
+            Number of Shares Issued: <input name="number_of_shares_in_issue" value="{vals['number_of_shares_in_issue']}"/><br>
+            Dividend Paid: <input name="dividend_paid" value="{vals['dividend_paid']}"/><br>
+            Book Value: <input name="book_value" value="{vals['book_value']}"/><br>
+            Report Link: <input name="report_link" value="{vals['report_link']}"/><br>
             <button type="submit">Save</button>
         </form>
         <a href="/admin/dashboard">← Back to dashboard</a>
     """)
-
     
 # ========== SCHEDULER ==========
 scheduler = BackgroundScheduler()
 
 def scheduled_scrape():
-    print("Scheduled scrape running...")
-    data = scrape_mse()
-    if data:
-        save_data(data)
+    logger.info("Scheduled scrape running...")
+    try:
+        data = scrape_mse()
+        if data:
+            save_data(data)
+    except Exception:
+        logger.exception("Scheduled scrape failed")
 
 def shutdown_scheduler(*args):
-    scheduler.shutdown(wait=True)
-    print("Scheduler shut down Gracefully")
-
-
-# ========== INIT ==========
-if __name__ == '__main__':
-    init_db()
-    initialize_fundamentals()
-    scheduler.add_job(scheduled_scrape, trigger='interval', minutes=5)
-    scheduler.start()
-    signal.signal(signal.SIGTERM, shutdown_scheduler)
-    signal.signal(signal.SIGINT, shutdown_scheduler)
     try:
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        scheduler.shutdown(wait=True)
+    except Exception:
+        pass
+    logger.info("Scheduler shut down Gracefully")
+
+
+# ========== App startup ==========
+def start_services():
+    init_db_pool()
+    init_db()
+    # Optionally seed fundamentals here by calling initialize_fundamentals_seed([...])
+    # Start scheduler
+    scheduler.add_job(scheduled_scrape, trigger="interval", minutes=5, next_run_time=datetime.utcnow())
+    scheduler.start()
+    # trap signals
+    signal.signal(signal.SIGINT, lambda *a: shutdown_scheduler())
+    signal.signal(signal.SIGTERM, lambda *a: shutdown_scheduler())
+    logger.info("Services started.")
+
+if __name__ == "__main__":
+    start_services()
+    try:
+        app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
     finally:
         shutdown_scheduler()
