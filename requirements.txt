@@ -11,4 +11,3 @@ Pillow
 python-dotenv
 requests-cache
 psycopg2-binary
-Flask-Caching
