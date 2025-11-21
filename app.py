@@ -22,7 +22,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from psycopg2 import pool, sql
 from dotenv import load_dotenv
-from Flask_Caching import Cache
+#from Flask_Caching import Cache
 from contextlib import contextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file, Response, abort 
@@ -48,7 +48,7 @@ if not DATABASE_URL:
 # ========== FLASK APP and caching ==========
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
-cache = Cache(app, config={"CACHE_TYPE": "simple"})  # replace with Redis in prod
+#cache = Cache(app, config={"CACHE_TYPE": "simple"})  # replace with Redis in prod
 
 # ========== Database Context Manager and Connection Pool ==========
 _pg_pool = None
