@@ -91,7 +91,6 @@ def convert_to_local_time(utc_dt):
         except Exception:
             return utc_dt
     if utc_dt.tzinfo is None:
-        # assume UTC if naive
         utc_dt = pytz.utc.localize(utc_dt)
     return utc_dt.astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -102,7 +101,6 @@ def safe_float(value):
         if isinstance(value, (int, float)):
             return float(value)
         s = str(value).replace(",", "").replace("MK", "").replace("%", "").strip()
-        # remove any non-digit except dot and minus
         s = re.sub(r"[^\d\.\-]", "", s)
         return float(s) if s != "" else None
     except Exception:
