@@ -184,112 +184,93 @@ def latest_prices():
 # ======= History Route
 @app.route("/history/<counter>", methods=["GET"])
 def get_history(counter):
-    counter = normalize_counter(counter)
-    limit = int(request.args.get("limit", 10))
-    order = request.args.get("order", "desc").lower()
-    if not counter:
-        return jsonify({"error": "Invalid counter"}), 400
     with get_db_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT timestamp, price
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT timestamp, last_price
             FROM stocks
             WHERE counter = %s
             ORDER BY timestamp DESC
             LIMIT %s
         """, (counter, limit))
-        rows = cur.fetchall()
-        cur.close()
-    history = [{"date": convert_to_local_time(r[0]), "price": float(r[1]) if r[1] is not None else None} for r in rows]
+        rows = cursor.fetchall()
+        cursor.close()
+    history = [{"timestamp": convert_to_local_time(r[0]), "last_price": float(r[1]) if r[1] is not None else None} for r in rows]
     if order == "asc":
         history = list(reversed(history))
     return jsonify(history)
             
-
-
-# ======= Insert Fundamentals 
+# ======= Insert Fundamentals Route
 @app.route("/insert_fundamentals", methods=["POST"])
 def insert_fundamentals():
-    if not request.json:
-        return jsonify({"error": "No JSON payload provided"}), 400
-    data = request.json
-    if not isinstance(data, list):
-        return jsonify({"error": "Payload must be a list of fundamentals objects"}), 400
     with get_db_connection() as conn:
-        cur = conn.cursor()
+        cursor = conn.cursor()
         for entry in data:
             counter = normalize_counter(entry.get("counter"))
             if not counter:
                 continue
-            net_profit = safe_float(entry.get("net_profit"))
-            shares = safe_int(entry.get("number_of_shares_in_issue"))
-            dividend = safe_float(entry.get("dividend_paid"))
-            book_value = safe_float(entry.get("book_value"))
-            report_link = entry.get("report_link")
-            cur.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link)
-                VALUES (%s, %s, %s, %s, %s, %s)
+            net_profit = float(entry.get("net_profit"))
+            number_of_shares_in_issue = int(entry.get("number_of_shares_in_issue"))
+            dividend_paid = float(entry.get("dividend_paid"))
+            book_value = float(entry.get("book_value"))
+            cursor.execute("""
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (counter)
                 DO UPDATE SET
                     net_profit = EXCLUDED.net_profit,
                     number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
                     dividend_paid = EXCLUDED.dividend_paid,
                     book_value = EXCLUDED.book_value,
-                    report_link = COALESCE(EXCLUDED.report_link, fundamentals.report_link),
-                    updated_at = CURRENT_TIMESTAMP;
-            """, (counter, net_profit, shares, dividend, book_value, report_link))
+                    timestamp = CURRENT_TIMESTAMP;
+            """, (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
         conn.commit()
-        cur.close()
-    return jsonify({"message": "Fundamentals inserted/updated successfully"})
-
+        cursor.close()
+    return jsonify({"message": "Fundamentals inserted/updated Successfully"})
 
 # ======= Fundamentals Route
 @app.route("/fundamentals/<counter>", methods=["GET"])
 def get_fundamentals(counter):
-    counter = normalize_counter(counter)
-    if not counter:
-        return jsonify({"error": "Invalid counter"}), 400
-    try:
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
-                FROM fundamentals
-                WHERE counter = %s
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+            FROM fundamentals
+            WHERE counter = %s
+         """, (counter,))
+        row = cursor.fetchone()
+        cursor.close()
+    if not row:
+         return jsonify({"error": "Data not available for this company"}), 404
+
+    net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
+    net_profit = safe_float(net_profit) or 0
+    number_of_shares_in_issue = safe_int(shares) or 0
+    dividend_paid = safe_float(dividend_paid) or 0
+    book_value = safe_float(book_value) or 0
+
+    eps = net_profit / number_of_shares_in_issue if number_of_shares_in_issue else 0
+    bvps = book_value / number_of_shares_in_issue if number_of_shares_in_issue else 0
+    dvps = dividend_paid / number_of_shares_in_issue if number_of_shares_in_issue else 0
+
+      
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT last_price FROM stocks
+            WHERE counter = %s
+            ORDER BY timestamp DESC
+            LIMIT 1
             """, (counter,))
-            row = cur.fetchone()
-            cur.close()
-        if not row:
-            return jsonify({"error": "Data not available for this company"}), 404
-
-        net_profit, shares, dividend, book_value = row
-        net_profit = safe_float(net_profit) or 0
-        shares = safe_int(shares) or 0
-        dividend = safe_float(dividend) or 0
-        book_value = safe_float(book_value) or 0
-
-        eps = net_profit / shares if shares else 0
-        bvps = book_value / shares if shares else 0
-        dvps = dividend / shares if shares else 0
-
-        # latest price
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT price FROM stocks
-                WHERE counter = %s
-                ORDER BY timestamp DESC
-                LIMIT 1
-            """, (counter,))
-            res = cur.fetchone()
-            cur.close()
+            res = cursor.fetchone()
+            cursor.close()
         if not res:
             return jsonify({"error": "Price data not available"}), 404
-        price = safe_float(res[0]) or 0
+        last_price = safe_float(res[0]) or 0
 
-        pe_ratio = price / eps if eps else None
-        pb_ratio = price / bvps if bvps else None
-        div_yield = (dvps / price) * 100 if price and dvps else None
+        pe_ratio = last_price / eps if eps else None
+        pb_ratio = last_price / bvps if bvps else None
+        div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
         return jsonify({
             "counter": counter,
@@ -297,12 +278,10 @@ def get_fundamentals(counter):
             "pe_ratio": round(pe_ratio, 4) if pe_ratio is not None else None,
             "pb_ratio": round(pb_ratio, 4) if pb_ratio is not None else None,
             "div_yield_percent": round(div_yield, 4) if div_yield is not None else None,
-            "price": round(price, 4)
+            "last_price": round(last_price, 4)
         })
     except Exception as e:
-        logger.exception("Error computing fundamentals for %s", counter)
         return jsonify({"error": str(e)}), 500
-
 
 # ======= Metrics Route
 @app.route("/metrics/<counter>", methods=["GET"])
@@ -312,61 +291,58 @@ def stock_metrics(counter):
         return jsonify({"error": "Invalid counter"}), 400
     try:
         with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
                 FROM fundamentals WHERE counter = %s
             """, (counter,))
-            fund = cur.fetchone()
-            cur.close()
+            fund = cursor.fetchone()
+            cursor.close()
         if not fund:
             return jsonify({"error": "Fundamentals not available"}), 404
 
-        net_profit, shares, dividend, book_value, report_link = fund
+        net_profit, number_of_shares_in_issue, dividend_paid, book_value, = fund
         net_profit = safe_float(net_profit) or 0
-        shares = safe_int(shares) or 0
-        dividend = safe_float(dividend) or 0
+        number_of_shares_in_issue = safe_int(number_of_shares_in_issue) or 0
+        dividend_paid = safe_float(dividend_paid) or 0
         book_value = safe_float(book_value) or 0
 
-        eps = net_profit / shares if shares else 0
-        bvps = book_value / shares if shares else 0
-        dvps = dividend / shares if shares else 0
+        eps = net_profit / number_of_shares_in_issue if number_of_shares_in_issue else 0
+        bvps = book_value / number_of_shares_in_issue if number_of_shares_in_issue else 0
+        dvps = dividend_paid / number_of_shares_in_issue if number_of_shares_in_issue else 0
 
         with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT price, change, volume, turnover, timestamp
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT last_price, change, volume, turnover, timestamp
                 FROM stocks WHERE counter = %s
                 ORDER BY timestamp DESC LIMIT 1
             """, (counter,))
-            latest = cur.fetchone()
-            cur.close()
+            latest = cursor.fetchone()
+            cursor.close()
         if not latest:
             return jsonify({"error": "Latest price data not found"}), 404
 
-        price, change_val, volume, turnover, ts = latest
-        price = safe_float(price) or 0
-        pe_ratio = price / eps if eps else None
-        pb_ratio = price / bvps if bvps else None
-        div_yield = (dvps / price) * 100 if price and dvps else None
+        last_price, change, volume, turnover, timestamp = latest
+        last_price = safe_float(last_price) or 0
+        pe_ratio = last_price / eps if eps else None
+        pb_ratio = last_price / bvps if bvps else None
+        div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
         return jsonify({
             "counter": counter,
-            "price": round(price, 4),
-            "change": round(safe_float(change_val) or 0, 4),
+            "last_price": round(last_price, 4),
+            "change": round(safe_float(change) or 0, 4),
             "volume": int(volume) if volume else None,
             "turnover": round(turnover, 4) if turnover else None,
-            "timestamp": convert_to_local_time(ts),
+            "timestamp": convert_to_local_time(timestamp),
             "eps": round(eps, 4),
             "pe_ratio": round(pe_ratio, 4) if pe_ratio is not None else None,
             "pb_ratio": round(pb_ratio, 4) if pb_ratio is not None else None,
-            "div_yield_percent": round(div_yield, 4) if div_yield is not None else None,
-            "report_link": report_link
+            "div_yield_percent": round(div_yield, 4) if div_yield is not None else None
         })
     except Exception as e:
-        logger.exception("Error computing metrics")
         return jsonify({"error": str(e)}), 500
-
 
 # ========== PDF Class ==========
 class PDF(FPDF):
