@@ -190,8 +190,8 @@ def initialize_fundamentals_seed(seed_data):
                 ON CONFLICT (counter)
                 DO UPDATE SET
                     net_profit = EXCLUDED.net_profit,
-                    shares = EXCLUDED.number_of_shares_in_issue,
-                    dividend = EXCLUDED.dividend_paid,
+                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
+                    dividend_paid = EXCLUDED.dividend_paid,
                     book_value = EXCLUDED.book_value,
                     updated_at = CURRENT_TIMESTAMP;
             """, (counter, net_profit, shares, dividend, book_value))
@@ -425,8 +425,8 @@ def insert_fundamentals():
                 ON CONFLICT (counter)
                 DO UPDATE SET
                     net_profit = EXCLUDED.net_profit,
-                    shares = EXCLUDED.number_of_shares_in_issue,
-                    dividend = EXCLUDED.dividend_paid,
+                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
+                    dividend_paid = EXCLUDED.dividend_paid,
                     book_value = EXCLUDED.book_value,
                     report_link = COALESCE(EXCLUDED.report_link, fundamentals.report_link),
                     updated_at = CURRENT_TIMESTAMP;
@@ -617,10 +617,10 @@ def fundamentals_report(counter):
             return jsonify({"error": "Data not available for this company"}), 404
 
         net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
-        net_profit = float(str(net_profit).replace(',', '')) if net_profit else 0
-        shares = float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
-        dividend = float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
-        book_value = float(str(book_value).replace(',', '')) if book_value else 0
+        net_profit = safe_float(str(net_profit).replace(',', '')) if net_profit else 0
+        shares = safe_float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
+        dividend = safe_float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
+        book_value = safe_float(str(book_value).replace(',', '')) if book_value else 0
 
         eps = net_profit / shares if shares else 0
         bvps = book_value / shares if shares else 0
