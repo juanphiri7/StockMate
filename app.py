@@ -54,7 +54,18 @@ def init_db_pool(minconn=1, maxconn=10):
     global _pg_pool
     if _pg_pool is None:
         logger.info("Initializing DB connection pool...")
-        _pg_pool = pool.SimpleConnectionPool(minconn, maxconn, dsn=DATABASE_URL)
+
+        _pg_pool = pool.SimpleConnectionPool(
+            minconn,
+            maxconn,
+            host="dpg-d1e02kje5dus73e21go0-a.oregon-postgres.render.com",
+            dbname="stockmate_db",
+            user="stockmate_db_user",
+            password="FNM30MpoAdD9G5HxYZVFQnGD34iWUvsl",
+            port=5432,
+            sslmode="require"
+        )
+
     return _pg_pool
 
 @contextmanager
