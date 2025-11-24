@@ -9,7 +9,6 @@ import fitz
 import atexit
 import signal
 import qrcode
-import logging
 import requests
 import tempfile
 import psycopg2.extras
@@ -26,134 +25,37 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file, Response, abort 
 
 
-# ========= Load Environment Variables and configure caching =========
-load_dotenv()
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=LOG_LEVEL,
-                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-logger = logging.getLogger("stockmate")
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY") or "fallback-secret-key-for-dev-only"
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD") or "default-dev-password"
-
-# Validate critical env vars early
-if not DATABASE_URL:
-    logger.error("DATABASE_URL is not set. Exiting.")
-    raise ValueError("DATABASE_URL environment variable is required")
-
-
-# ========== FLASK APP and caching ==========
+# ========== FLASK APP ==========
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
-# ========== Database Context Manager and Connection Pool ==========
-_pg_pool = None
-
-def init_db_pool(minconn=1, maxconn=10):
-    global _pg_pool
-    if _pg_pool is None:
-        logger.info("Initializing DB connection pool...")
-
-        _pg_pool = pool.SimpleConnectionPool(
-            minconn,
-            maxconn,
-            host="dpg-d1e02kje5dus73e21go0-a.oregon-postgres.render.com",
-            dbname="stockmate_db",
-            user="stockmate_db_user",
-            password="FNM30MpoAdD9G5HxYZVFQnGD34iWUvsl",
-            port=5432,
-            sslmode="require"
-        )
-
-    return _pg_pool
-
-@contextmanager
-def get_db_connection():
-    """
-    Context manager to get a connection from the pool and automatically return it.
-    Usage:
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            ...
-    """
-    global _pg_pool
-    if _pg_pool is None:
-        init_db_pool()
-    conn = _pg_pool.getconn()
+# ========== TIMEZONE CONVERTER ==========
+def convert_to_local_time(utc_time_str):
     try:
-        yield conn
-    finally:
-        try:
-            _pg_pool.putconn(conn)
-        except Exception:
-            conn.close()
-
-
-# ========== TIMEZONE CONVERTER and Utilities ==========
-LOCAL_TZ = pytz.timezone("Africa/Blantyre")  # user's default tz
-
-def convert_to_local_time(utc_dt):
-    if not utc_dt:
-        return None
-    if isinstance(utc_dt, str):
-        try:
-            utc_dt = datetime.strptime(utc_dt, "%Y-%m-%d %H:%M:%S")
-        except Exception:
-            return utc_dt
-    if utc_dt.tzinfo is None:
-        utc_dt = pytz.utc.localize(utc_dt)
-    return utc_dt.astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S")
-
-def safe_float(value):
-    if value is None:
-        return None
-    try:
-        if isinstance(value, (int, float)):
-            return float(value)
-        s = str(value).replace(",", "").replace("MK", "").replace("%", "").strip()
-        s = re.sub(r"[^\d\.\-]", "", s)
-        return float(s) if s != "" else None
-    except Exception:
-        return None
-
-def safe_int(value):
-    if value is None:
-        return None
-    try:
-        if isinstance(value, int):
-            return value
-        s = str(value).replace(",", "").strip()
-        s = re.sub(r"[^\d\-]", "", s)
-        return int(s) if s != "" else None
-    except Exception:
-        return None
-
-def normalize_counter(counter):
-    if not counter:
-        return None
-    return re.sub(r"[^A-Z0-9]", "", counter.upper())
-        
+        utc = pytz.utc
+        local = pytz.timezone('Africa/Blantyre')  # GMT+2
+        utc_dt = datetime.strptime(utc_time_str, '%Y-%m-%d %H:%M:%S')
+        local_dt = utc.localize(utc_dt).astimezone(local)
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
+    except:
+        return utc_time_str
 
 # ========== DATABASE INIT ==========
 def init_db():
-    """Create required tables if missing and add helpful indices."""
-    logger.info("Initializing database schema...")
     with get_db_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("""
+        cursor = conn.cursor()
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS stocks (
                 id SERIAL PRIMARY KEY,
-                counter TEXT NOT NULL,
-                price NUMERIC,
+                counter TEXT UNIQUE NOT NULL,
+                last_price NUMERIC,
                 change NUMERIC,
                 volume BIGINT,
                 turnover NUMERIC,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+            )
         """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_stocks_counter_ts ON stocks (counter, timestamp DESC);")
-        cur.execute("""
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS fundamentals (
                 id SERIAL PRIMARY KEY,
                 counter TEXT UNIQUE NOT NULL,
@@ -161,218 +63,123 @@ def init_db():
                 number_of_shares_in_issue BIGINT,
                 dividend_paid NUMERIC,
                 book_value NUMERIC,
-                report_link TEXT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_fun_counter ON fundamentals (counter);")
         conn.commit()
-        cur.close()
-    logger.info("Database schema ready.")
-
-# ========== Initialize sample fundamentals (if you want to seed) ==========
-def initialize_fundamentals_seed(seed_data):
-    """Seed fundamentals; uses UPSERT semantics."""
-    logger.info("Seeding fundamentals (if not present)...")
-    with get_db_connection() as conn:
-        cur = conn.cursor()
-        for entry in seed_data:
-            counter = normalize_counter(entry.get("counter"))
-            if not counter:
-                continue
-            net_profit = safe_float(entry.get("net_profit"))
-            shares = safe_int(entry.get("number_of_shares_in_issue"))
-            dividend = safe_float(entry.get("dividend_paid"))
-            book_value = safe_float(entry.get("book_value"))
-            cur.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (counter)
-                DO UPDATE SET
-                    net_profit = EXCLUDED.net_profit,
-                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
-                    dividend_paid = EXCLUDED.dividend_paid,
-                    book_value = EXCLUDED.book_value,
-                    updated_at = CURRENT_TIMESTAMP;
-            """, (counter, net_profit, shares, dividend, book_value))
-        conn.commit()
-        cur.close()
-    logger.info("Seeding done.")
-
+        conn.close()
 
 # ==================== SCRAPE ====================
-HEADERS = {"User-Agent": "Mozilla/5.0 (StockMate Bot)"}
-requests.adapters.DEFAULT_RETRIES = 2
-
-def parse_price_cell(text):
-    """Return numeric last price or None."""
-    return safe_float(text)
-
-def parse_change_cell(text):
-    return safe_float(text)
-
-def parse_volume_cell(text):
-    # volume is often integer, may include commas
-    return safe_int(text)
-
-def parse_turnover_cell(text):
-    return safe_float(text)
-
 def scrape_mse():
-    """
-    Scrape the MSE homepage table of counters.
-    Returns a list of dicts with normalized values.
-    Cached at function level for a short time via flask-cache on caller.
-    """
     url = "https://www.mse.co.mw/"
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=10)
-        resp.raise_for_status()
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, "html.parser")
+        table = soup.find("table", {"class": "table"})
+        if not table:
+            return []
+        rows = table.find_all("tr")
+        for row in rows[1:]:
+            cols = row.find_all("td")
+            if len(cols) >= 5:
+                data.append({
+                    'Counter': cols[0].text.strip(),
+                    'Last Price (MK)': cols[1].text.strip(),
+                    '% Change': cols[2].text.strip(),
+                    'Volume': cols[3].text.strip(),
+                    'Turnover (MK)': cols[4].text.strip()
+                })
+        return data
     except Exception as e:
-        logger.error("Failed to fetch MSE page: %s", e)
-        return []
-
-    soup = BeautifulSoup(resp.content, "html.parser")
-    table = soup.find("table", {"class": "table"})
-    if not table:
-        logger.warning("No table found on MSE page.")
-        return []
-
-    data = []
-    rows = table.find_all("tr")
-    for row in rows[1:]:
-        cols = row.find_all("td")
-        if len(cols) < 5:
-            continue
-        raw_counter = cols[0].get_text(strip=True)
-        counter = normalize_counter(raw_counter)
-        if not counter:
-            continue
-
-        last_price = parse_price_cell(cols[1].get_text(strip=True))
-        change_val = parse_change_cell(cols[2].get_text(strip=True))
-        volume = parse_volume_cell(cols[3].get_text(strip=True))
-        turnover = parse_turnover_cell(cols[4].get_text(strip=True))
-
-        data.append({
-            "counter": counter,
-            "price": last_price,
-            "change": change_val,
-            "volume": volume,
-            "turnover": turnover
-        })
-    logger.info("Scraped %d counters from MSE", len(data))
-    return data
-
+        print("Scraping Error:", e)
+        return []    
 
 # ==================== SAVE ====================
 def save_data(stock_data):
-    """
-    Insert fetched stock rows into the DB if the last record for this counter
-    (within the last hour) is different.
-    """
-    if not stock_data:
-        return 0
-    inserted = 0
     with get_db_connection() as conn:
-        cur = conn.cursor()
+        cursor = conn.cursor()
         for item in stock_data:
-            counter = item.get("counter")
-            last_price = item.get("price")
-            change_val = item.get("change")
-            volume = item.get("volume")
-            turnover = item.get("turnover")
-            # Avoid saving if the most recent row (within 1 hour) matches these values
-            cur.execute("""
-                SELECT 1 FROM stocks
-                WHERE counter = %s
-                  AND COALESCE(price::text, '') = COALESCE(%s::text, '')
-                  AND COALESCE(change::text, '') = COALESCE(%s::text, '')
-                  AND COALESCE(volume::text, '') = COALESCE(%s::text, '')
-                  AND COALESCE(turnover::text, '') = COALESCE(%s::text, '')
-                  AND timestamp >= NOW() - INTERVAL '1 hour';
-            """, (counter, last_price, change_val, volume, turnover))
-            if cur.fetchone():
-                continue
-            cur.execute("""
-                INSERT INTO stocks (counter, price, change, volume, turnover)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (counter, last_price, change_val, volume, turnover))
-            inserted += 1
-        conn.commit()
-        cur.close()
-    logger.info("Saved %d new stock rows", inserted)
-    return inserted
-
+        cursor.execute('''
+            SELECT 1 FROM stocks
+            WHERE counter = ? AND last_price = ? AND change = ? AND volume = ? AND turnover = ?
+            AND timestamp >= datetime('now', '-1 hour')
+        ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+        if not cursor.fetchone():
+            cursor.execute('''
+                INSERT INTO stocks (counter, last_price, change, volume, turnover)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+    conn.commit()
+    conn.close()
 
 # ================= API ROUTES =================
-
 # ======= Home Route
-@app.route("/")
+@app.route("/") 
 def home():
     return "Hello There! StockMate API is Running!"
-
 
 # ======= Scrape Route
 @app.route("/scrape", methods=["GET"])
 def scrape_and_save():
     data = scrape_mse()
-    if not data:
+    if data:
+        save_data(data)
+        return jsonify({"message": "Success! Data scraped and saved", "scraped": len(data), "inserted": count})
+    else:
         return jsonify({"error": "Failed to scrape data"}), 500
-    count = save_data(data)
-    return jsonify({"message": "Success! Data scraped and saved", "scraped": len(data), "inserted": count})
-
-
+      
 # ======= Stocks Route
 @app.route("/stocks", methods=["GET"])
 def get_stocks():
     limit = int(request.args.get("limit", 20))
     with get_db_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT counter, price, change, volume, turnover, timestamp
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT counter, last_price, change, volume, turnover, timestamp
             FROM stocks
             ORDER BY timestamp DESC
             LIMIT %s
         """, (limit,))
-        rows = cur.fetchall()
-        cur.close()
+        rows = cursor.fetchall()
+        conn.close()
     return jsonify([
-        {
-            "counter": r[0],
-            "price": float(r[1]) if r[1] is not None else None,
-            "change": float(r[2]) if r[2] is not None else None,
-            "volume": int(r[3]) if r[3] is not None else None,
-            "turnover": float(r[4]) if r[4] is not None else None,
-            "timestamp": convert_to_local_time(r[5])
-        } for r in rows
-    ])
-
-
-# ======= Latest Prices Route
-@app.route("/latest_prices", methods=["GET"])
-def latest_prices():
-    with get_db_connection() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT s.counter, s.price, s.change, s.volume, s.turnover, MAX(s.timestamp)
-            FROM stocks AS s
-            GROUP BY s.counter, s.price, s.change, s.volume, s.turnover
-        """)
-        rows = cur.fetchall()
-        cur.close()
     results = []
     for r in rows:
         results.append({
             "counter": r[0],
-            "price": float(r[1]) if r[1] is not None else None,
+            "last_price": float(r[1]) if r[1] is not None else None,
+            "change": float(r[2]) if r[2] is not None else None,
+            "volume": int(r[3]) if r[3] is not None else None,
+            "turnover": float(r[4]) if r[4] is not None else None,
+            "timestamp": convert_to_local_time(r[5])
+        })
+    return jsonify(results) 
+  
+# ======= Latest Prices Route
+@app.route("/latest_prices", methods=["GET"])
+def latest_prices():
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT counter, last_price, change, volume, turnover, MAX(timestamp)
+            FROM stocks
+            GROUP BY counter
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+    results = []
+    for r in rows:
+        results.append({
+            "counter": r[0],
+            "last_price": float(r[1]) if r[1] is not None else None,
             "change": float(r[2]) if r[2] is not None else None,
             "volume": int(r[3]) if r[3] is not None else None,
             "turnover": float(r[4]) if r[4] is not None else None,
             "timestamp": convert_to_local_time(r[5])
         })
     return jsonify(results)
-
 
 # ======= History Route
 @app.route("/history/<counter>", methods=["GET"])
