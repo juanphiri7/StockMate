@@ -401,18 +401,18 @@ def fundamentals_report(counter):
 
         net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
         net_profit = safe_float(str(net_profit).replace(',', '')) if net_profit else 0
-        shares = safe_float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
-        dividend = safe_float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
+        number_of_shares_in_issue = safe_float(str(number_of_shares_in_issue).replace(',', '')) if number_of_shares_in_issue else 0
+        dividend_paid = safe_float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
         book_value = safe_float(str(book_value).replace(',', '')) if book_value else 0
 
-        eps = net_profit / shares if shares else 0
-        bvps = book_value / shares if shares else 0
-        dvps = dividend / shares if shares else 0
+        eps = net_profit / number_of_shares_in_issue if number_of_shares_in_issue else 0
+        bvps = book_value / number_of_shares_in_issue if number_of_shares_in_issue else 0
+        dvps = dividend_paid / number_of_shares_in_issue if number_of_shares_in_issue else 0
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT price FROM stocks
+                SELECT last_price FROM stocks
                 WHERE counter = %s
                 ORDER BY timestamp DESC LIMIT 1
             ''', (counter,))
@@ -420,10 +420,10 @@ def fundamentals_report(counter):
         if not result:
             return jsonify({"error": "Price data not available"}), 404
 
-        price = float(str(result[0]).replace(',', '')) if result[0] else 0
-        pe_ratio = price / eps if eps else None
-        pb_ratio = price / bvps if bvps else None
-        div_yield = (dvps / price) * 100 if price and dvps else None
+        last_price = float(str(result[0]).replace(',', '')) if result[0] else 0
+        pe_ratio = last_price / eps if eps else None
+        pb_ratio = last_price / bvps if bvps else None
+        div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
         pdf = PDF()
         load_fonts(pdf)
@@ -447,10 +447,10 @@ def fundamentals_report(counter):
 
         pdf.set_text_color(0)
         pdf.set_font("DejaVu", "", 12)
-        pdf.cell(0, 10, f"Latest Price: MK {price:,.2f}" if price else "Latest Price: N/A", ln=True)
+        pdf.cell(0, 10, f"Latest Price: MK {last_price:,.2f}" if last_price else "Latest Price: N/A", ln=True)
         pdf.cell(0, 10, f"Net Profit: MK {net_profit:,.2f}" if net_profit else "Net Profit: N/A", ln=True)
-        pdf.cell(0, 10, f"Dividend Paid: MK {dividend:,.2f}" if dividend else "Dividend Paid: N/A", ln=True)
-        pdf.cell(0, 10, f"Number of Shares in Issue: {shares:,.0f}" if shares else "Number of Shares in Issue: N/A", ln=True)
+        pdf.cell(0, 10, f"Dividend Paid: MK {dividend_paid:,.2f}" if dividend_paid else "Dividend Paid: N/A", ln=True)
+        pdf.cell(0, 10, f"Number of Shares in Issue: {number_of_shares_in_issue:,.0f}" if number_of_shares_in_issue else "Number of Shares in Issue: N/A", ln=True)
         pdf.cell(0, 10, f"Book Value: MK {book_value:,.2f}" if book_value else "Book Value: N/A", ln=True)
         pdf.ln(5)
         pdf.set_font("DejaVu", "B", 16)
