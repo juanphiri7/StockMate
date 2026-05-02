@@ -118,14 +118,14 @@ def save_data(data):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         for item in data:
-        cursor.execute('''
-            SELECT 1 FROM stocks
-            WHERE counter = %s AND last_price = %s AND change = %s AND volume = %s AND turnover = %s
+            cursor.execute('''
+                SELECT 1 FROM stocks
+                WHERE counter = %s AND last_price = %s AND change = %s AND volume = %s AND turnover = %s
             AND timestamp >= datetime('now', '-1 hour')
         ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
-        if not cursor.fetchone():
-            cursor.execute('''
-                INSERT INTO stocks (counter, last_price, change, volume, turnover)
+            if not cursor.fetchone():
+                cursor.execute('''
+                    INSERT INTO stocks (counter, last_price, change, volume, turnover)
                 VALUES (%s, %s, %s, %s, %s)
             ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
     conn.commit()
