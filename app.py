@@ -36,6 +36,15 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
+# ========== DB POOL ==========
+db_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
+
+def get_conn():
+    return db_pool.getconn()
+
+def put_conn(conn):
+    db_pool.putconn(conn)
+
 # ========== TIMEZONE CONVERTER ==========
 def convert_to_local_time(utc_time_str):
     try:
