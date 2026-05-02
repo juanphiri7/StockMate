@@ -119,23 +119,18 @@ def save_data(data):
         cursor = conn.cursor()
         for item in data:
             cursor.execute('''
-                SELECT 1 FROM stocks
-                WHERE counter = %s AND last_price = %s AND change = %s AND volume = %s AND turnover = %s
-            AND timestamp >= datetime('now', '-1 hour')
-        ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
-            if not cursor.fetchone():
-                cursor.execute('''
-                    INSERT INTO stocks (counter, last_price, change, volume, turnover)
+                INSERT INTO stocks (counter, last_price, change, volume, turnover)
                 VALUES (%s, %s, %s, %s, %s)
             ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
-    conn.commit()
-    conn.close()
+        conn.commit()
+        cursor.close()
+        put_conn(conn)
 
 # ================= API ROUTES =================
 # ======= Home Route
 @app.route("/") 
 def home():
-    return "Hello There! StockMate API is Running!"
+    return "Hello There! StockMate API is Running!✨️"
 
 # ======= Scrape Route
 @app.route("/scrape", methods=["GET"])
@@ -160,19 +155,20 @@ def get_stocks():
             LIMIT %s
         """, (limit,))
         rows = cursor.fetchall()
-        conn.close()
-    return jsonify([
-    results = []
-    for r in rows:
-        results.append({
-            "counter": r[0],
-            "last_price": float(r[1]) if r[1] is not None else None,
-            "change": float(r[2]) if r[2] is not None else None,
-            "volume": int(r[3]) if r[3] is not None else None,
-            "turnover": float(r[4]) if r[4] is not None else None,
-            "timestamp": convert_to_local_time(r[5])
-        })
-    return jsonify(results) 
+        
+        result = []
+        for r in rows:
+            result.append({
+                "counter": r[0],
+                "last_price": float(r[1]) if r[1] is not None else None,
+                "change": float(r[2]) if r[2] is not None else None,
+                "volume": int(r[3]) if r[3] is not None else None,
+                "turnover": float(r[4]) if r[4] is not None else None,
+                "timestamp": convert_to_local_time(r[5])
+            })
+        cursor.close()
+        put_conn(conn)
+        return jsonify(result) 
   
 # ======= Latest Prices Route
 @app.route("/latest_prices", methods=["GET"])
@@ -185,22 +181,25 @@ def latest_prices():
             GROUP BY counter
         """)
         rows = cursor.fetchall()
-        conn.close()
-    results = []
-    for r in rows:
-        results.append({
-            "counter": r[0],
-            "last_price": float(r[1]) if r[1] is not None else None,
-            "change": float(r[2]) if r[2] is not None else None,
-            "volume": int(r[3]) if r[3] is not None else None,
-            "turnover": float(r[4]) if r[4] is not None else None,
-            "timestamp": convert_to_local_time(r[5])
-        })
-    return jsonify(results)
+       
+        result = []
+        for r in rows:
+            result.append({
+                "counter": r[0],
+                "last_price": float(r[1]) if r[1] is not None else None,
+                "change": float(r[2]) if r[2] is not None else None,
+                "volume": int(r[3]) if r[3] is not None else None,
+                "turnover": float(r[4]) if r[4] is not None else None,
+                "timestamp": convert_to_local_time(r[5])
+            })
+        cursor.close()
+        put_conn(conn)
+        return jsonify(result)
 
 # ======= History Route
 @app.route("/history/<counter>", methods=["GET"])
 def get_history(counter):
+    limit = int(request.args.get("limit", 30))
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -209,13 +208,13 @@ def get_history(counter):
             WHERE counter = %s
             ORDER BY timestamp DESC
             LIMIT %s
-        """, (counter, limit))
+        """, (counter.upper(), limit))
         rows = cursor.fetchall()
+        
+        history = [{"timestamp": convert_to_local_time(r[0]), "last_price": float(r[1]) if r[1] is not None else None} for r in rows]
         cursor.close()
-    history = [{"timestamp": convert_to_local_time(r[0]), "last_price": float(r[1]) if r[1] is not None else None} for r in rows]
-    if order == "asc":
-        history = list(reversed(history))
-    return jsonify(history)
+        put_conn(conn)
+        return jsonify(list(reversed(history)))
             
 # ======= Insert Fundamentals Route
 @app.route("/insert_fundamentals", methods=["POST"])
@@ -243,7 +242,7 @@ def insert_fundamentals():
             """, (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
         conn.commit()
         cursor.close()
-    return jsonify({"message": "Fundamentals inserted/updated Successfully"})
+        return jsonify({"message": "Fundamentals inserted/updated Successfully"})
 
 # ======= Fundamentals Route
 @app.route("/fundamentals/<counter>", methods=["GET"])
