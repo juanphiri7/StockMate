@@ -260,7 +260,7 @@ def get_history(counter):
 # ======= Insert Fundamentals Route
 @app.route("/insert_fundamentals", methods=["POST"])
 def insert_fundamentals():
-    data = request.json. or []
+    data = request.json or []
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
