@@ -1,1 +1,18 @@
-#
+version: "1"
+services:
+- type: web
+  name: StockMate7
+  runtime: python
+  repo: https://github.com/juanphiri7/StockMate
+  plan: free
+  envVars:
+  - key: ADMIN_PASSWORD
+    sync: false
+  - key: FLASK_SECRET_KEY
+    sync: false
+  - key: DATABASE_URL
+    sync: false
+  region: frankfurt
+  buildCommand: pip install -r requirements.txt
+  startCommand: gunicorn app:app
+  autoDeployTrigger: commit
