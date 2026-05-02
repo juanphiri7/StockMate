@@ -105,7 +105,7 @@ def init_db():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fundamentals (
                 id SERIAL PRIMARY KEY,
-                counter TEXT NOT NULL,
+                counter TEXT UNIQUE NOT NULL,
                 net_profit NUMERIC,
                 number_of_shares BIGINT,
                 dividend_paid NUMERIC,               
@@ -615,57 +615,70 @@ def admin_dashboard():
 def admin_add():
     if not session.get("logged_in"):
         return redirect(url_for("admin_login"))
-    if request.method == "POST":
-        payload = {
-            "counter": request.form.get("counter"),
-            "net_profit": request.form.get("net_profit"),
-            "number_of_shares": request.form.get("number_of_shares"),
-            "dividend_paid": request.form.get("dividend_paid")            
-        }
 
-        # Use insert_fundamentals logic (single item)
+    if request.method == "POST":               
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            counter = normalize_counter(payload["counter"])
+            
+            counter = normalize_counter(request.form.get("counter"))
             if not counter:
-                return "Invalid counter", 400
+                return "Invalid Counter", 400
+           
             cursor.execute("""
                 INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT (counter) DO UPDATE
-                SET net_profit = EXCLUDED.net_profit,
+                ON CONFLICT (counter) 
+                DO UPDATE SET 
+                    net_profit = EXCLUDED.net_profit,
                     number_of_shares = EXCLUDED.number_of_shares,
-                    dividend = EXCLUDED.dividend_paid                                                         
+                    dividend_paid = EXCLUDED.dividend_paid,
+                    timestamp = CURRENT_TIMESTAMP                                     
             """, (
-                counter, 
-                safe_float(payload["net_profit"]),
-                safe_int(payload["number_of_shares"]),
-                safe_float(payload["dividend_paid"])                 
+                counter,
+                safe_float(request.form.get("net_profit")),
+                safe_int(request.form.get("number_of_shares")),
+                safe_float(request.form.get("dividend_paid"))                 
             ))
-        conn.commit()
-    return redirect(url_for("admin_dashboard"))
+
+            conn.commit()
+
+        return redirect(url_for("admin_dashboard"))
 
     return render_template_string("""
         <h2>Add Company Fundamentals</h2>
+
         <form method="POST">
-            Counter: <input name="counter"/><br/>
-            Net Profit: <input name="net_profit"/><br/>
-            Number of Shares: <input name="number_of_shares"/><br/>
-            Dividend Paid: <input name="dividend_paid"/><br/>           
+            <label>Counter:</label><br>
+            <input name="counter" required><br><br>
+
+            <label>Net Profit (MK):</label><br>
+            <input name="net_profit"><br><br>
+
+            <label>Number of Shares:</label><br>
+            <input name="number_of_shares"><br><br>
+
+            <label>Dividend Paid (MK):</label><br>
+            <input name="dividend_paid"><br><br>
+
             <button type="submit">Save</button>
         </form>
-        <a href="/admin/dashboard">← Back</a>
-    """)
 
+        <br>
+        <a href="/admin/dashboard">← Back to Dashboard</a>
+    """)
+          
 
 # ========== Admin Edit Counter Route
 @app.route("/admin/edit/<counter>", methods=["GET", "POST"])
 def edit_counter(counter):
     if not session.get("logged_in"):
         return redirect(url_for("admin_login"))
+
     counter = normalize_counter(counter)
+
     if not counter:
         return "Invalid Counter", 400
+
     if request.method == "POST":
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -673,15 +686,18 @@ def edit_counter(counter):
                 UPDATE fundamentals 
                 SET net_profit = %s, 
                     number_of_shares = %s, 
-                    dividend_paid = %s
+                    dividend_paid = %s,
+                    timestamp = CURRENT_TIMESTAMP
                 WHERE counter = %s
             """, (
                 safe_float(request.form.get("net_profit")),
                 safe_int(request.form.get("number_of_shares")),
-                safe_float(request.form.get("dividend_paid"))
+                safe_float(request.form.get("dividend_paid")), 
+                counter      
             ))
-        conn.commit()           
-    return redirect(url_for("admin_dashboard"))
+
+            conn.commit()           
+        return redirect(url_for("admin_dashboard"))
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -690,23 +706,30 @@ def edit_counter(counter):
             FROM fundamentals 
             WHERE counter=%s
         """, (counter,))
+
         row = cursor.fetchone()
-        
-        values = {"net_profit": "", "number_of_shares": "", "dividend_paid": ""}
-        if row:
-            values["net_profit"], values["number_of_shares"], values["dividend_paid"] = row
-        return render_template_string(f"""
-            <h2>Edit Fundamentals for {counter}</h2>
-            <form method="POST">
-                Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>
-                Number of Shares: <input name="number_of_shares" value="{values['number_of_shares']}"/><br>
-                Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>            
-                <button type="submit">Save</button>
-            </form>
-            <a href="/admin/dashboard">← Back</a>
-        """)
- 
-   
+
+    return render_template_string(f"""
+        <h2>Edit Fundamentals for {counter}</h2>
+
+        <form method="POST">
+            <label>Net Profit (MK):</label><br>
+            <input name="net_profit" value="{row[0] if row else ''}"><br><br>
+
+            <label>Number of Shares:</label><br>
+            <input name="number_of_shares" value="{row[1] if row else ''}"><br><br>
+
+            <label>Dividend Paid (MK):</label><br>
+            <input name="dividend_paid" value="{row[2] if row else ''}"><br><br>
+
+            <button type="submit">Update</button>
+        </form>
+
+        <br>
+        <a href="/admin/dashboard">← Back to Dashboard</a>
+    """)
+
+
 # ========== SCHEDULER ==========
 scheduler = BackgroundScheduler()
 
