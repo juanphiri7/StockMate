@@ -365,23 +365,18 @@ def stock_metrics(counter):
                 ORDER BY timestamp DESC LIMIT 1
             """, (counter,))
             latest = cursor.fetchone()
-            cursor.close()
+            
         if not latest:
-            return jsonify({"error": "Latest price data not found"}), 404
+            return jsonify({"error": "Latest price data unavailable"}), 404
 
-        last_price, change, volume, turnover, timestamp = latest
-        last_price = safe_float(last_price) or 0
+        last_price = safe_float(latest[0]) or 0
         pe_ratio = last_price / eps if eps else None
         pb_ratio = last_price / bvps if bvps else None
         div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
         return jsonify({
             "counter": counter,
-            "last_price": round(last_price, 4),
-            "change": round(safe_float(change) or 0, 4),
-            "volume": int(volume) if volume else None,
-            "turnover": round(turnover, 4) if turnover else None,
-            "timestamp": convert_to_local_time(timestamp),
+            "last_price": round(last_price, 4),           
             "eps": round(eps, 4),
             "pe_ratio": round(pe_ratio, 4) if pe_ratio is not None else None,
             "pb_ratio": round(pb_ratio, 4) if pb_ratio is not None else None,
@@ -613,16 +608,14 @@ def admin_add():
             if not counter:
                 return "Invalid counter", 400
             cur.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value, report_link)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid, book_value)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (counter) DO UPDATE
                 SET net_profit = EXCLUDED.net_profit,
-                    shares = EXCLUDED.number_of_shares_in_issue,
+                    shares = EXCLUDED.number_of_shares,
                     dividend = EXCLUDED.dividend_paid,
-                    book_value = EXCLUDED.book_value,
-                    report_link = COALESCE(EXCLUDED.report_link, fundamentals.report_link),
-                    updated_at = CURRENT_TIMESTAMP;
-            """, (counter, safe_float(payload["net_profit"]), safe_int(payload["number_of_shares_in_issue"]),
+                    book_value = EXCLUDED.book_value,                    
+            """, (counter, safe_float(payload["net_profit"]), safe_int(payload["number_of_shares"]),
                   safe_float(payload["dividend_paid"]), safe_float(payload["book_value"]), payload["report_link"]))
             conn.commit()
             cur.close()
