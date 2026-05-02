@@ -650,10 +650,15 @@ def edit_counter(counter):
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE fundamentals 
-                SET net_profit = %s, number_of_shares = %s, dividend_paid = %s
+                SET net_profit = %s, 
+                    number_of_shares = %s, 
+                    dividend_paid = %s
                 WHERE counter = %s
-            """, (safe_float(request.form.get("net_profit")), safe_int(request.form.get("number_of_shares")),
-                  safe_float(request.form.get("dividend_paid"))
+            """, (
+                safe_float(request.form.get("net_profit")),
+                safe_int(request.form.get("number_of_shares")),
+                safe_float(request.form.get("dividend_paid"))
+            ))
         conn.commit()           
     return redirect(url_for("admin_dashboard"))
 
