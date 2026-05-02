@@ -762,7 +762,8 @@ def start_services():
         minutes = 10, 
         next_run_time = datetime.utcnow()
     )
-    scheduler.start()
+    if not scheduler.running:
+        scheduler.start()
 
     # trap signal
     signal.signal(signal.SIGINT, lambda *a: shutdown_scheduler())
@@ -770,11 +771,13 @@ def start_services():
     logger.info("Services Started.")
 
 if __name__ == "__main__":
-    start_services()
     try:
+        start_services()
         app.run(
             host="0.0.0.0", 
-            port=int(os.getenv("PORT", 5000)), 
+            port=int(os.getenv("PORT", 10000)), 
             debug=False)
+    except Exception as e:
+        logger.exception("App Failed to Start!!")
     finally:
         shutdown_scheduler()
