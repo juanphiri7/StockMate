@@ -32,6 +32,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
+# ========== LOGGING ==========
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # ========== FLASK APP ==========
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
@@ -44,6 +48,32 @@ def get_conn():
 
 def put_conn(conn):
     db_pool.putconn(conn)
+
+@contextmanager
+def get_db_connection():
+    conn = get_conn()
+    try:
+        yield conn
+    finally:
+        put_conn(conn)
+
+# ========== HELPERS ==========
+def normalize_counter(counter):
+    if not counter:
+        return None
+    return counter.strip().upper()
+
+def safe_float(val):
+    try:
+        return float(str(val).replace(',', ''))
+    except:
+        return None
+
+def safe_int(val):
+    try:
+        return int(str(val).replace(',', ''))
+    except:
+        return None
 
 # ========== TIMEZONE CONVERTER ==========
 def convert_to_local_time(utc_time_str):
@@ -76,14 +106,15 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 counter TEXT UNIQUE NOT NULL,
                 net_profit NUMERIC,
-                number_of_shares_in_issue BIGINT,
+                number_of_shares BIGINT,
                 dividend_paid NUMERIC,
                 book_value NUMERIC,
+                market_capitalization NUMERIC,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         conn.commit()
-        conn.close()
+       
 
 # ==================== SCRAPE ====================
 def scrape_mse():
@@ -103,14 +134,14 @@ def scrape_mse():
             if len(cols) >= 5:
                 data.append({
                     'Counter': cols[0].text.strip(),
-                    'Last Price (MK)': cols[1].text.strip(),
-                    '% Change': cols[2].text.strip(),
-                    'Volume': cols[3].text.strip(),
-                    'Turnover (MK)': cols[4].text.strip()
+                    'Last Price (MK)': safe_float(cols[1].text),
+                    '% Change': safe_float(cols[2].text),
+                    'Volume': safe_int(cols[3].text),
+                    'Turnover (MK)': safe_float(cols[4].text)
                 })
         return data
     except Exception as e:
-        print("Scraping Error:", e)
+        logger.error(f"Scraping Error: {e}")
         return []    
 
 # ==================== SAVE ====================
@@ -123,8 +154,7 @@ def save_data(data):
                 VALUES (%s, %s, %s, %s, %s)
             ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
         conn.commit()
-        cursor.close()
-        put_conn(conn)
+
 
 # ================= API ROUTES =================
 # ======= Home Route
@@ -138,7 +168,7 @@ def scrape_and_save():
     data = scrape_mse()
     if data:
         save_data(data)
-        return jsonify({"message": "Success! Data scraped and saved", "scraped": len(data), "inserted": count})
+        return jsonify({"message": "Success! Data scraped and saved", "scraped": len(data), "inserted": len(data)})
     else:
         return jsonify({"error": "Failed to scrape data"}), 500
       
@@ -166,8 +196,6 @@ def get_stocks():
                 "turnover": float(r[4]) if r[4] is not None else None,
                 "timestamp": convert_to_local_time(r[5])
             })
-        cursor.close()
-        put_conn(conn)
         return jsonify(result) 
   
 # ======= Latest Prices Route
@@ -176,9 +204,10 @@ def latest_prices():
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT counter, last_price, change, volume, turnover, MAX(timestamp)
+            SELECT DISTINCT ON (counter)
+                counter, last_price, change, volume, turnover, timestamp
             FROM stocks
-            GROUP BY counter
+            ORDER BY counter, timestamp DESC
         """)
         rows = cursor.fetchall()
        
@@ -192,8 +221,6 @@ def latest_prices():
                 "turnover": float(r[4]) if r[4] is not None else None,
                 "timestamp": convert_to_local_time(r[5])
             })
-        cursor.close()
-        put_conn(conn)
         return jsonify(result)
 
 # ======= History Route
@@ -211,38 +238,43 @@ def get_history(counter):
         """, (counter.upper(), limit))
         rows = cursor.fetchall()
         
-        history = [{"timestamp": convert_to_local_time(r[0]), "last_price": float(r[1]) if r[1] is not None else None} for r in rows]
-        cursor.close()
-        put_conn(conn)
+        history = [{
+            "timestamp": convert_to_local_time(r[0]), 
+            "last_price": float(r[1]) if r[1] is not None else None
+        } for r in rows]
         return jsonify(list(reversed(history)))
             
 # ======= Insert Fundamentals Route
 @app.route("/insert_fundamentals", methods=["POST"])
 def insert_fundamentals():
+    data = request.json
     with get_db_connection() as conn:
         cursor = conn.cursor()
         for entry in data:
             counter = normalize_counter(entry.get("counter"))
             if not counter:
-                continue
-            net_profit = float(entry.get("net_profit"))
-            number_of_shares_in_issue = int(entry.get("number_of_shares_in_issue"))
-            dividend_paid = float(entry.get("dividend_paid"))
-            book_value = float(entry.get("book_value"))
+                continue              
             cursor.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid, book_value, market_capitalization)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (counter)
                 DO UPDATE SET
                     net_profit = EXCLUDED.net_profit,
-                    number_of_shares_in_issue = EXCLUDED.number_of_shares_in_issue,
+                    number_of_shares = EXCLUDED.number_of_shares,
                     dividend_paid = EXCLUDED.dividend_paid,
                     book_value = EXCLUDED.book_value,
+                    market_capitalization = EXCLUDED.market_capitalization,
                     timestamp = CURRENT_TIMESTAMP;
-            """, (counter, net_profit, number_of_shares_in_issue, dividend_paid, book_value)
-        conn.commit()
-        cursor.close()
-        return jsonify({"message": "Fundamentals inserted/updated Successfully"})
+            """, (
+                counter,
+                safe_float(entry.get("net_profit")),
+                safe_int(entry.get("number_of_shares")),
+                safe_float(entry.get("dividend_paid")),
+                safe_float(entry.get("book_value")),
+                safe_float(entry.get("market_capitalization"))
+            ))
+        conn.commit()        
+    return jsonify({"message": "Fundamentals inserted/updated Successfully"})
 
 # ======= Fundamentals Route
 @app.route("/fundamentals/<counter>", methods=["GET"])
@@ -250,24 +282,26 @@ def get_fundamentals(counter):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+            SELECT net_profit, number_of_shares, dividend_paid, book_value, market_capitalization
             FROM fundamentals
             WHERE counter = %s
          """, (counter,))
         row = cursor.fetchone()
-        cursor.close()
+        
     if not row:
          return jsonify({"error": "Data not available for this company"}), 404
 
-    net_profit, number_of_shares_in_issue, dividend_paid, book_value = row
+    net_profit, number_of_shares, dividend_paid, book_value, market_capitalization = row
+
     net_profit = safe_float(net_profit) or 0
-    number_of_shares_in_issue = safe_int(shares) or 0
+    number_of_shares = safe_int(number_of_shares) or 0
     dividend_paid = safe_float(dividend_paid) or 0
     book_value = safe_float(book_value) or 0
+    market_capitalization = safe_float(market_capitalization) or 0
 
-    eps = net_profit / number_of_shares_in_issue if number_of_shares_in_issue else 0
-    bvps = book_value / number_of_shares_in_issue if number_of_shares_in_issue else 0
-    dvps = dividend_paid / number_of_shares_in_issue if number_of_shares_in_issue else 0
+    eps = net_profit / number_of_shares if number_of_shares else 0
+    bvps = book_value / number_of_shares if number_of_shares else 0
+    dvps = dividend_paid / number_of_shares if number_of_shares else 0
 
       
     with get_db_connection() as conn:
@@ -279,7 +313,7 @@ def get_fundamentals(counter):
             LIMIT 1
             """, (counter,))
             res = cursor.fetchone()
-            cursor.close()
+          
         if not res:
             return jsonify({"error": "Price data not available"}), 404
         last_price = safe_float(res[0]) or 0
@@ -309,23 +343,19 @@ def stock_metrics(counter):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT net_profit, number_of_shares_in_issue, dividend_paid, book_value
+                SELECT net_profit, number_of_shares, dividend_paid, book_value, market_capitalization
                 FROM fundamentals WHERE counter = %s
             """, (counter,))
-            fund = cursor.fetchone()
-            cursor.close()
-        if not fund:
+            fundamental = cursor.fetchone()
+           
+        if not fundamental:
             return jsonify({"error": "Fundamentals not available"}), 404
 
-        net_profit, number_of_shares_in_issue, dividend_paid, book_value, = fund
-        net_profit = safe_float(net_profit) or 0
-        number_of_shares_in_issue = safe_int(number_of_shares_in_issue) or 0
-        dividend_paid = safe_float(dividend_paid) or 0
-        book_value = safe_float(book_value) or 0
-
-        eps = net_profit / number_of_shares_in_issue if number_of_shares_in_issue else 0
-        bvps = book_value / number_of_shares_in_issue if number_of_shares_in_issue else 0
-        dvps = dividend_paid / number_of_shares_in_issue if number_of_shares_in_issue else 0
+        net_profit, number_of_shares, dividend_paid, book_value, market_capitalization = fundamental
+        
+        eps = (safe_float(net_profit) or 0) / (safe_int(number_of_shares) or 1)
+        bvps = (safe_float(book_value) or 0) / (safe_int(number_of_shares) or 1)
+        dvps = (safe_float(dividend_paid) or 0) / (safe_int(number_of_shares) or 1)
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
