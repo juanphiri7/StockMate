@@ -114,19 +114,19 @@ def scrape_mse():
         return []    
 
 # ==================== SAVE ====================
-def save_data(stock_data):
+def save_data(data):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        for item in stock_data:
+        for item in data:
         cursor.execute('''
             SELECT 1 FROM stocks
-            WHERE counter = ? AND last_price = ? AND change = ? AND volume = ? AND turnover = ?
+            WHERE counter = %s AND last_price = %s AND change = %s AND volume = %s AND turnover = %s
             AND timestamp >= datetime('now', '-1 hour')
         ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
         if not cursor.fetchone():
             cursor.execute('''
                 INSERT INTO stocks (counter, last_price, change, volume, turnover)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
     conn.commit()
     conn.close()
