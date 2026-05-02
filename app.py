@@ -24,8 +24,6 @@ from dotenv import load_dotenv
 from contextlib import contextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file, Response, abort 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 # ========== LOAD ENV ===========
@@ -79,15 +77,14 @@ def safe_int(val):
         return None
 
 # ========== TIMEZONE CONVERTER ==========
-def convert_to_local_time(utc_time_str):
+def convert_to_local_time(dt):
     try:
-        utc = pytz.utc
         local = pytz.timezone('Africa/Blantyre')  # GMT+2
-        utc_dt = datetime.strptime(utc_time_str, '%Y-%m-%d %H:%M:%S')
-        local_dt = utc.localize(utc_dt).astimezone(local)
-        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
+        if dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)    
+        return dt.astimezone(local).strftime('%Y-%m-%d %H:%M:%S')
     except:
-        return utc_time_str
+        return str(dt)
 
 # ========== DATABASE INIT ==========
 def init_db():
@@ -104,6 +101,7 @@ def init_db():
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fundamentals (
                 id SERIAL PRIMARY KEY,
@@ -150,10 +148,22 @@ def save_data(data):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         for item in data:
-            cursor.execute('''
-                INSERT INTO stocks (counter, last_price, change, volume, turnover)
-                VALUES (%s, %s, %s, %s, %s)
-            ''', (item['Counter'], item['Last Price (MK)'], item['% Change'], item['Volume'], item['Turnover (MK)']))
+            cursor.execute("""
+                SELECT 1 FROM stocks
+                WHERE counter = %s AND timestamp >= NOW() - INTERVAL '5 minutes'
+            """, (item['Counter'],))
+
+            if not cursor.fetchone():
+                cursor.execute("""
+                    INSERT INTO stocks (counter, last_price, change, volume, turnover)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    item['Counter'], 
+                    item['Last Price (MK)'], 
+                    item['% Change'], 
+                    item['Volume'], 
+                    item['Turnover (MK)']
+                ))
         conn.commit()
 
 
@@ -191,10 +201,10 @@ def get_stocks():
         for r in rows:
             result.append({
                 "counter": r[0],
-                "last_price": float(r[1]) if r[1] is not None else None,
-                "change": float(r[2]) if r[2] is not None else None,
-                "volume": int(r[3]) if r[3] is not None else None,
-                "turnover": float(r[4]) if r[4] is not None else None,
+                "last_price": float(r[1]) if r[1] else None,
+                "change": float(r[2]) if r[2] else None,
+                "volume": int(r[3]) if r[3] else None,
+                "turnover": float(r[4]) if r[4] else None,
                 "timestamp": convert_to_local_time(r[5])
             })
         return jsonify(result) 
@@ -216,10 +226,10 @@ def latest_prices():
         for r in rows:
             result.append({
                 "counter": r[0],
-                "last_price": float(r[1]) if r[1] is not None else None,
-                "change": float(r[2]) if r[2] is not None else None,
-                "volume": int(r[3]) if r[3] is not None else None,
-                "turnover": float(r[4]) if r[4] is not None else None,
+                "last_price": float(r[1]) if r[1] else None,
+                "change": float(r[2]) if r[2] else None,
+                "volume": int(r[3]) if r[3] else None,
+                "turnover": float(r[4]) if r[4] else None,
                 "timestamp": convert_to_local_time(r[5])
             })
         return jsonify(result)
@@ -237,24 +247,28 @@ def get_history(counter):
             ORDER BY timestamp DESC
             LIMIT %s
         """, (counter.upper(), limit))
+
         rows = cursor.fetchall()
         
         history = [{
             "timestamp": convert_to_local_time(r[0]), 
-            "last_price": float(r[1]) if r[1] is not None else None
+            "last_price": float(r[1]) if r[1] else None
         } for r in rows]
+
         return jsonify(list(reversed(history)))
             
 # ======= Insert Fundamentals Route
 @app.route("/insert_fundamentals", methods=["POST"])
 def insert_fundamentals():
-    data = request.json
+    data = request.json. or []
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
         for entry in data:
             counter = normalize_counter(entry.get("counter"))
             if not counter:
-                continue              
+                continue
+              
             cursor.execute("""
                 INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid)
                 VALUES (%s, %s, %s, %s)
@@ -271,7 +285,7 @@ def insert_fundamentals():
                 safe_float(entry.get("dividend_paid"))                
             ))
         conn.commit()        
-    return jsonify({"message": "Fundamentals inserted/updated Successfully"})
+    return jsonify({"message": "Fundamentals updated Successfully"})
 
 # ======= Fundamentals Route
 @app.route("/fundamentals/<counter>", methods=["GET"])
@@ -307,11 +321,12 @@ def get_fundamentals(counter):
                 WHERE counter = %s
                 ORDER BY timestamp DESC
                 LIMIT 1
-                """, (counter,))
+            """, (counter,))
+
             row = cursor.fetchone()
           
             if not row:
-                return jsonify({"error": "Price data not available"}), 404
+                return jsonify({"error": "Price data not Available"}), 404
             last_price = safe_float(row[0]) or 0
 
             # Fundamentals
@@ -344,15 +359,16 @@ def stock_metrics(counter):
                 FROM fundamentals 
                 WHERE counter = %s
             """, (counter,))
+
             fundamental = cursor.fetchone()
            
         if not fundamental:
-            return jsonify({"error": "Fundamentals not available"}), 404
+            return jsonify({"error": "Fundamentals not Available"}), 404
 
         net_profit, number_of_shares, dividend_paid = fundamental
         
-        eps = (safe_float(net_profit) or 0) / (safe_int(number_of_shares) or 1)       
-        dvps = (safe_float(dividend_paid) or 0) / (safe_int(number_of_shares) or 1)
+        eps = (safe_float(net_profit) or 0) / (safe_int(number_of_shares) or 0)       
+        dvps = (safe_float(dividend_paid) or 0) / (safe_int(number_of_shares) or 0)
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -363,14 +379,15 @@ def stock_metrics(counter):
                 ORDER BY timestamp DESC 
                 LIMIT 1
             """, (counter,))
+
             latest = cursor.fetchone()
             
         if not latest:
-            return jsonify({"error": "Latest price data unavailable"}), 404
+            return jsonify({"error": "Latest price data Unavailable"}), 404
 
         last_price = safe_float(latest[0]) or 0
         pe_ratio = last_price / eps if eps else None  
-        market_cap = last_price * number_of_shares if number_of_shares else 0     
+        market_cap = last_price * number_of_shares if number_of_shares else None     
         div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
         return jsonify({
@@ -431,12 +448,14 @@ def fundamentals_report(counter):
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute("""
                 SELECT net_profit, number_of_shares, dividend_paid 
                 FROM fundamentals 
                 WHERE counter = %s
-            ''', (counter,))
+            """, (counter,))  
+         
             row = cursor.fetchone()
+
         if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
@@ -451,13 +470,15 @@ def fundamentals_report(counter):
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute("""
                 SELECT last_price FROM stocks
                 WHERE counter = %s
                 ORDER BY timestamp DESC 
                 LIMIT 1
-            ''', (counter,))
+            """, (counter,))
+
             result = cursor.fetchone()
+
         if not result:
             return jsonify({"error": "Price data not Available"}), 404
 
@@ -696,8 +717,8 @@ def scheduled_scrape():
         if data:
             save_data(data)
             logger.info("Scheduled scrape Successful")
-    except Exception:
-        logger.exception("Scheduled scrape Failed")
+    except Exception as e:
+        logger.error(str(e))
 
 def shutdown_scheduler(*args):
     try:
@@ -710,18 +731,27 @@ def shutdown_scheduler(*args):
 # ========== App Startup ==========
 def start_services():
     init_db()
-    # Optionally seed fundamentals here by calling initialize_fundamentals_seed([...])
+   
     # Start scheduler
-    scheduler.add_job(scheduled_scrape, trigger="interval", minutes=5, next_run_time=datetime.utcnow())
+    scheduler.add_job(
+        scheduled_scrape, 
+        trigger = "interval", 
+        minutes = 10, 
+        next_run_time = datetime.utcnow()
+    )
     scheduler.start()
-    # trap signals
+
+    # trap signal
     signal.signal(signal.SIGINT, lambda *a: shutdown_scheduler())
     signal.signal(signal.SIGTERM, lambda *a: shutdown_scheduler())
-    logger.info("Services started.")
+    logger.info("Services Started.")
 
 if __name__ == "__main__":
     start_services()
     try:
-        app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
+        app.run(
+            host="0.0.0.0", 
+            port=int(os.getenv("PORT", 5000)), 
+            debug=False)
     finally:
         shutdown_scheduler()
