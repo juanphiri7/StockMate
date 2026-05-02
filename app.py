@@ -30,7 +30,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
-PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 # ========== FLASK APP ==========
 app = Flask(__name__)
