@@ -676,7 +676,7 @@ def edit_counter(counter):
                 Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>            
                 <button type="submit">Save</button>
             </form>
-            <a href="/admin/dashboard">← Back to dashboard</a>
+            <a href="/admin/dashboard"> Back to dashboard</a>
         """)
  
    
