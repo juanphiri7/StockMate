@@ -96,6 +96,7 @@ def scrape_mse():
         table = soup.find("table", {"class": "table"})
         if not table:
             return []
+        data = []
         rows = table.find_all("tr")
         for row in rows[1:]:
             cols = row.find_all("td")
