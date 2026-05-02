@@ -42,7 +42,17 @@ app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
 # ========== DB POOL ==========
-db_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
+try:
+    db_pool = pool.SimpleConnectionPool(
+        1,
+        10,
+        DATABASE_URL,
+        sslmode="require"
+    )
+    logger.info("Database pool created successfully")
+except Exception as e:
+    logger.exception("Database connection failed")
+    raise
 
 def get_conn():
     return db_pool.getconn()
@@ -50,6 +60,7 @@ def get_conn():
 def put_conn(conn):
     db_pool.putconn(conn)
 
+# ======= Context Manager =======
 @contextmanager
 def get_db_connection():
     conn = get_conn()
