@@ -25,6 +25,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session, send_file, Response, abort 
 
 
+# ========== LOAD ENV ===========
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+PASSWORD = os.getenv("ADMIN_PASSWORD")
+
 # ========== FLASK APP ==========
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
