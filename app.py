@@ -107,19 +107,17 @@ def init_db():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fundamentals (
                 id SERIAL PRIMARY KEY,
-                counter TEXT UNIQUE NOT NULL,
+                counter TEXT NOT NULL,
                 net_profit NUMERIC,
                 number_of_shares BIGINT,
-                dividend_paid NUMERIC,
-                book_value NUMERIC,
-                market_capitalization NUMERIC,
+                dividend_paid NUMERIC,               
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         conn.commit()
        
 
-# ==================== SCRAPE ====================
+# ==================== SCRAPE MSE ====================
 def scrape_mse():
     url = "https://www.mse.co.mw/"
     headers = {'User-Agent': 'Mozilla/5.0'}
@@ -171,14 +169,14 @@ def scrape_and_save():
     data = scrape_mse()
     if data:
         save_data(data)
-        return jsonify({"message": "Success! Data scraped and saved", "scraped": len(data), "inserted": len(data)})
+        return jsonify({"message": "Success! Data Scraped and Saved", "scraped": len(data), "inserted": len(data)})
     else:
-        return jsonify({"error": "Failed to scrape data"}), 500
+        return jsonify({"error": "Failed to Scrape Data"}), 500
       
 # ======= Stocks Route
 @app.route("/stocks", methods=["GET"])
 def get_stocks():
-    limit = int(request.args.get("limit", 20))
+    limit = int(request.args.get("limit", 30))
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -258,23 +256,19 @@ def insert_fundamentals():
             if not counter:
                 continue              
             cursor.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid, book_value, market_capitalization)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid)
+                VALUES (%s, %s, %s, %s)
                 ON CONFLICT (counter)
                 DO UPDATE SET
                     net_profit = EXCLUDED.net_profit,
                     number_of_shares = EXCLUDED.number_of_shares,
-                    dividend_paid = EXCLUDED.dividend_paid,
-                    book_value = EXCLUDED.book_value,
-                    market_capitalization = EXCLUDED.market_capitalization,
+                    dividend_paid = EXCLUDED.dividend_paid,                    
                     timestamp = CURRENT_TIMESTAMP;
             """, (
                 counter,
                 safe_float(entry.get("net_profit")),
                 safe_int(entry.get("number_of_shares")),
-                safe_float(entry.get("dividend_paid")),
-                safe_float(entry.get("book_value")),
-                safe_float(entry.get("market_capitalization"))
+                safe_float(entry.get("dividend_paid"))                
             ))
         conn.commit()        
     return jsonify({"message": "Fundamentals inserted/updated Successfully"})
@@ -286,7 +280,7 @@ def get_fundamentals(counter):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT net_profit, number_of_shares, dividend_paid, book_value, market_capitalization
+                SELECT net_profit, number_of_shares, dividend_paid
                 FROM fundamentals
                 WHERE counter = %s
              """, (counter,))
@@ -295,18 +289,16 @@ def get_fundamentals(counter):
         if not row:
              return jsonify({"error": "Data not available for this company"}), 404
 
-        net_profit, number_of_shares, dividend_paid, book_value, market_capitalization = row
+        net_profit, number_of_shares, dividend_paid = row
 
         net_profit = safe_float(net_profit) or 0
         number_of_shares = safe_int(number_of_shares) or 0
-        dividend_paid = safe_float(dividend_paid) or 0
-        book_value = safe_float(book_value) or 0
-        market_capitalization = safe_float(market_capitalization) or 0
+        dividend_paid = safe_float(dividend_paid) or 0       
 
-        eps = net_profit / number_of_shares if number_of_shares else 0
-        bvps = book_value / number_of_shares if number_of_shares else 0
+        # Fundamentals 
+        eps = net_profit / number_of_shares if number_of_shares else 0        
         dvps = dividend_paid / number_of_shares if number_of_shares else 0
-
+        
          
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -322,17 +314,18 @@ def get_fundamentals(counter):
                 return jsonify({"error": "Price data not available"}), 404
             last_price = safe_float(row[0]) or 0
 
+            # Fundamentals
             pe_ratio = last_price / eps if eps else None
-            pb_ratio = last_price / bvps if bvps else None
+            market_cap = last_price * number_of_shares if number_of_shares else 0
             div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
             return jsonify({
                 "counter": counter,
-                "eps": round(eps, 4),
-                "pe_ratio": round(pe_ratio, 4) if pe_ratio is not None else None,
-                "pb_ratio": round(pb_ratio, 4) if pb_ratio is not None else None,
-                "div_yield_percent": round(div_yield, 4) if div_yield is not None else None,
-                "last_price": round(last_price, 4)
+                "eps": round(eps, 2),
+                "pe_ratio": round(pe_ratio, 2) if pe_ratio is not None else None,
+                "market_cap": round(market_cap, 2) if market_cap is not None else None,
+                "div_yield_percent": round(div_yield, 2) if div_yield is not None else None,
+                "last_price": round(last_price, 2)
             })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -347,26 +340,28 @@ def stock_metrics(counter):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT net_profit, number_of_shares, dividend_paid, book_value, market_capitalization
-                FROM fundamentals WHERE counter = %s
+                SELECT net_profit, number_of_shares, dividend_paid
+                FROM fundamentals 
+                WHERE counter = %s
             """, (counter,))
             fundamental = cursor.fetchone()
            
         if not fundamental:
             return jsonify({"error": "Fundamentals not available"}), 404
 
-        net_profit, number_of_shares, dividend_paid, book_value, market_capitalization = fundamental
+        net_profit, number_of_shares, dividend_paid = fundamental
         
-        eps = (safe_float(net_profit) or 0) / (safe_int(number_of_shares) or 1)
-        bvps = (safe_float(book_value) or 0) / (safe_int(number_of_shares) or 1)
+        eps = (safe_float(net_profit) or 0) / (safe_int(number_of_shares) or 1)       
         dvps = (safe_float(dividend_paid) or 0) / (safe_int(number_of_shares) or 1)
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT last_price, change, volume, turnover, timestamp
-                FROM stocks WHERE counter = %s
-                ORDER BY timestamp DESC LIMIT 1
+                FROM stocks 
+                WHERE counter = %s
+                ORDER BY timestamp DESC 
+                LIMIT 1
             """, (counter,))
             latest = cursor.fetchone()
             
@@ -374,17 +369,17 @@ def stock_metrics(counter):
             return jsonify({"error": "Latest price data unavailable"}), 404
 
         last_price = safe_float(latest[0]) or 0
-        pe_ratio = last_price / eps if eps else None
-        pb_ratio = last_price / bvps if bvps else None
+        pe_ratio = last_price / eps if eps else None  
+        market_cap = last_price * number_of_shares if number_of_shares else 0     
         div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
         return jsonify({
             "counter": counter,
-            "last_price": round(last_price, 4),           
-            "eps": round(eps, 4),
-            "pe_ratio": round(pe_ratio, 4) if pe_ratio is not None else None,
-            "pb_ratio": round(pb_ratio, 4) if pb_ratio is not None else None,
-            "div_yield_percent": round(div_yield, 4) if div_yield is not None else None
+            "last_price": round(last_price, 2),           
+            "eps": round(eps, 2),
+            "pe_ratio": round(pe_ratio, 2) if pe_ratio is not None else None,
+            "market_cap": round(market_cap, 2) if market_cap is not None else None,
+            "div_yield_percent": round(div_yield, 2) if div_yield is not None else None
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -437,23 +432,21 @@ def fundamentals_report(counter):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT net_profit, number_of_shares, dividend_paid, book_value, market_capitalization 
-                FROM fundamentals WHERE counter = %s
+                SELECT net_profit, number_of_shares, dividend_paid 
+                FROM fundamentals 
+                WHERE counter = %s
             ''', (counter,))
             row = cursor.fetchone()
         if not row:
             return jsonify({"error": "Data not available for this company"}), 404
 
-        net_profit, number_of_shares, dividend_paid, book_value, market_capitalization = row
+        net_profit, number_of_shares, dividend_paid = row
         net_profit = safe_float(str(net_profit).replace(',', '')) if net_profit else 0
         number_of_shares = safe_int(str(number_of_shares).replace(',', '')) if number_of_shares else 0
         dividend_paid = safe_float(str(dividend_paid).replace(',', '')) if dividend_paid else 0
-        book_value = safe_float(str(book_value).replace(',', '')) if book_value else 0
-        market_capitalization = safe_float(str(market_capitalization).replace(',', '')) if market_capitalization else 0
-
-
-        eps = net_profit / number_of_shares if number_of_shares else 0
-        bvps = book_value / number_of_shares if number_of_shares else 0
+        
+        # Fundamentals 
+        eps = net_profit / number_of_shares if number_of_shares else 0       
         dvps = dividend_paid / number_of_shares if number_of_shares else 0
 
         with get_db_connection() as conn:
@@ -461,7 +454,8 @@ def fundamentals_report(counter):
             cursor.execute('''
                 SELECT last_price FROM stocks
                 WHERE counter = %s
-                ORDER BY timestamp DESC LIMIT 1
+                ORDER BY timestamp DESC 
+                LIMIT 1
             ''', (counter,))
             result = cursor.fetchone()
         if not result:
@@ -469,7 +463,7 @@ def fundamentals_report(counter):
 
         last_price = float(str(result[0]).replace(',', '')) if result[0] else 0
         pe_ratio = last_price / eps if eps else None
-        pb_ratio = last_price / bvps if bvps else None
+        market_cap = last_price * number_of_shares if number_of_shares else 0     
         div_yield = (dvps / last_price) * 100 if last_price and dvps else None
 
         pdf = PDF()
@@ -497,9 +491,7 @@ def fundamentals_report(counter):
         pdf.cell(0, 10, f"Latest Price: MK {last_price:,.2f}" if last_price else "Latest Price: N/A", ln=True)
         pdf.cell(0, 10, f"Net Profit: MK {net_profit:,.2f}" if net_profit else "Net Profit: N/A", ln=True)
         pdf.cell(0, 10, f"Dividend Paid: MK {dividend_paid:,.2f}" if dividend_paid else "Dividend Paid: N/A", ln=True)
-        pdf.cell(0, 10, f"Number of Shares: {number_of_shares:,.0f}" if number_of_shares else "Number of Shares: N/A", ln=True)
-        pdf.cell(0, 10, f"Book Value: MK {book_value:,.2f}" if book_value else "Book Value: N/A", ln=True)
-        pdf.cell(0, 10, f"Market Capitalization: MK {market_capitalization:,.2f}" if market_capitalization else "Market Capitalization: N/A", ln=True)
+        pdf.cell(0, 10, f"Number of Shares: {number_of_shares:,.0f}" if number_of_shares else "Number of Shares: N/A", ln=True)              
         pdf.ln(5)
         pdf.set_font("DejaVu", "B", 16)
         pdf.cell(0, 10, "Key Financial Metrics", ln=True)
@@ -507,9 +499,8 @@ def fundamentals_report(counter):
         pdf.cell(0, 10, f"Earnings Per Share (EPS): {eps:.2f}" if eps else "Earnings Per Share (EPS): N/A", ln=True)
         pdf.cell(0, 10, f"P/E Ratio: {pe_ratio:.2f}" if pe_ratio else "P/E Ratio: N/A", ln=True)
         pdf.cell(0, 10, f"Dividend Yield: {div_yield:.2f}%" if div_yield else "Dividend Yield: N/A", ln=True)
-        pdf.cell(0, 10, f"P/B Ratio: {pb_ratio:.2f}" if pb_ratio else "P/B Ratio: N/A", ln=True)
-        pdf.cell(0, 10, f"Book Value Per Share (BVPS): {bvps:.2f}" if bvps else "Book Value Per Share (BVPS): N/A", ln=True)
-        pdf.ln(12)
+        pdf.cell(0, 10, f"Market Capitalization: MK {market_cap:,.2f}" if market_cap else "Market Capitalization: N/A", ln=True)
+        pdf.ln(10)
         pdf.set_font("DejaVu", "I", 10)
         pdf.set_text_color(90)
         pdf.multi_cell(0, 10, f"Disclaimer: This report is auto-generated based on public financial data from the Malawi Stock Exchange.\nAccuracy is NOT guaranteed. Please Scan the QR Code to verify {counter}'s official data. Invest wisely.")
@@ -583,7 +574,11 @@ def admin_dashboard():
     # list fundamentals in DB
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT counter, net_profit, number_of_shares, dividend_paid, book_value, market_capitalization FROM fundamentals ORDER BY counter")
+        cursor.execute("""
+            SELECT counter, net_profit, number_of_shares, dividend_paid
+            FROM fundamentals 
+            ORDER BY counter
+        """)
         rows = cursor.fetchall()
         
     html = "<h2>Company Fundamentals (DB)</h2><ul>"
@@ -604,9 +599,7 @@ def admin_add():
             "counter": request.form.get("counter"),
             "net_profit": request.form.get("net_profit"),
             "number_of_shares": request.form.get("number_of_shares"),
-            "dividend_paid": request.form.get("dividend_paid"),
-            "book_value": request.form.get("book_value"),
-            "market_capitalization": request.form.get("market_capitalization")
+            "dividend_paid": request.form.get("dividend_paid")            
         }
 
         # Use insert_fundamentals logic (single item)
@@ -616,33 +609,28 @@ def admin_add():
             if not counter:
                 return "Invalid counter", 400
             cursor.execute("""
-                INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid, book_value, market_capitalization)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid)
+                VALUES (%s, %s, %s, %s)
                 ON CONFLICT (counter) DO UPDATE
                 SET net_profit = EXCLUDED.net_profit,
                     number_of_shares = EXCLUDED.number_of_shares,
-                    dividend = EXCLUDED.dividend_paid,
-                    book_value = EXCLUDED.book_value,
-                    market_capitalization = EXCLUDED.market_capitalization,                    
+                    dividend = EXCLUDED.dividend_paid                                                         
             """, (
                 counter, 
                 safe_float(payload["net_profit"]),
                 safe_int(payload["number_of_shares"]),
-                safe_float(payload["dividend_paid"]), 
-                safe_float(payload["book_value"]),
-                safe_float(payload["market_capitalization"])
+                safe_float(payload["dividend_paid"])                 
             ))
         conn.commit()
     return redirect(url_for("admin_dashboard"))
+
     return render_template_string("""
         <h2>Add Company Fundamentals</h2>
         <form method="POST">
             Counter: <input name="counter"/><br/>
             Net Profit: <input name="net_profit"/><br/>
             Number of Shares: <input name="number_of_shares"/><br/>
-            Dividend Paid: <input name="dividend_paid"/><br/>
-            Book Value: <input name="book_value"/><br/>
-            Market Capitalization: <input name="market_capitalization"/><br/>
+            Dividend Paid: <input name="dividend_paid"/><br/>           
             <button type="submit">Save</button>
         </form>
         <a href="/admin/dashboard">← Back</a>
@@ -661,34 +649,35 @@ def edit_counter(counter):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                UPDATE fundamentals SET net_profit = %s, number_of_shares = %s, dividend_paid = %s, book_value = %s, market_capitalization = %s
+                UPDATE fundamentals 
+                SET net_profit = %s, number_of_shares = %s, dividend_paid = %s
                 WHERE counter = %s
             """, (safe_float(request.form.get("net_profit")), safe_int(request.form.get("number_of_shares")),
-                  safe_float(request.form.get("dividend_paid")), safe_float(request.form.get("book_value")),
-                  request.form.get("market_capitalization"), company))
-            conn.commit()
-            
-        return redirect(url_for("admin_dashboard"))
+                  safe_float(request.form.get("dividend_paid"))
+        conn.commit()           
+    return redirect(url_for("admin_dashboard"))
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT net_profit, number_of_shares, dividend_paid, book_value, market_capitalization FROM fundamentals WHERE counter=%s", (counter,))
+        cursor.execute("""
+            SELECT net_profit, number_of_shares, dividend_paid 
+            FROM fundamentals 
+            WHERE counter=%s", (counter,))
         row = cursor.fetchone()
-        cursor.close()
-    vals = {"net_profit": "", "number_of_shares": "", "dividend_paid": "", "book_value": "", "market_capitalization": ""}
-    if row:
-        vals["net_profit"], vals["number_of_shares"], vals["dividend_paid"], vals["book_value"], vals["market_capitalization"] = row
-    return render_template_string(f"""
-        <h2>Edit Fundamentals for {company}</h2>
-        <form method="POST">
-            Net Profit: <input name="net_profit" value="{vals['net_profit']}"/><br>
-            Number of Shares: <input name="number_of_shares" value="{vals['number_of_shares']}"/><br>
-            Dividend Paid: <input name="dividend_paid" value="{vals['dividend_paid']}"/><br>
-            Book Value: <input name="book_value" value="{vals['book_value']}"/><br>
-            Market Capitalization: <input name="market_capitalization" value="{vals['market_capitalization]}"/><br>
-            <button type="submit">Save</button>
-        </form>
-        <a href="/admin/dashboard">← Back to dashboard</a>
-    """)
+        
+        values = {"net_profit": "", "number_of_shares": "", "dividend_paid": ""}
+        if row:
+            values["net_profit"], values["number_of_shares"], values["dividend_paid"] = row
+        return render_template_string(f"""
+            <h2>Edit Fundamentals for {counter}</h2>
+            <form method="POST">
+                Net Profit: <input name="net_profit" value="{values['net_profit']}"/><br>
+                Number of Shares: <input name="number_of_shares" value="{values['number_of_shares']}"/><br>
+                Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>            
+                <button type="submit">Save</button>
+            </form>
+            <a href="/admin/dashboard">← Back to dashboard</a>
+        """)
  
    
 # ========== SCHEDULER ==========
