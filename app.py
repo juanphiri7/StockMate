@@ -51,7 +51,7 @@ try:
     )
     logger.info("Database pool created successfully")
 except Exception as e:
-    logger.exception("Database connection failed")
+    logger.exception(f"Database connection failed: {e}")
     raise
 
 def get_conn():
