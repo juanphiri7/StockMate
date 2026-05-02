@@ -662,7 +662,8 @@ def edit_counter(counter):
         cursor.execute("""
             SELECT net_profit, number_of_shares, dividend_paid 
             FROM fundamentals 
-            WHERE counter=%s", (counter,))
+            WHERE counter=%s
+        """, (counter,))
         row = cursor.fetchone()
         
         values = {"net_profit": "", "number_of_shares": "", "dividend_paid": ""}
@@ -676,7 +677,7 @@ def edit_counter(counter):
                 Dividend Paid: <input name="dividend_paid" value="{values['dividend_paid']}"/><br>            
                 <button type="submit">Save</button>
             </form>
-            <a href="/admin/dashboard"> Back to dashboard</a>
+            <a href="/admin/dashboard">← Back</a>
         """)
  
    
