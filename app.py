@@ -147,20 +147,14 @@ def init_db():
 
 # ==================== SCRAPE MSE ====================
 def scrape_mse():
-    url = "https://afx.kwayisi.org/mse/"
+    url = "https://www.mse.co.mw/"
 
     session = requests.Session()
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1"
-    }
+    headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
         # First request (establish cookies)
-        session.get(url, headers=headers, timeout=15)
+        session.get(url, headers=headers, timeout=30)
 
         # Second request (actual fetch)
         response = session.get(url, headers=headers, timeout=30)
