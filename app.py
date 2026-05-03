@@ -42,17 +42,36 @@ app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
 # ========== DB POOL ==========
-try:
-    db_pool = pool.SimpleConnectionPool(
-        1,
-        10,
-        DATABASE_URL,
-        sslmode="require"
-    )
-    logger.info("Database pool created successfully")
-except Exception as e:
-    logger.exception(f"Database connection failed: {e}")
-    raise
+db_pool = None
+
+def init_db_pool(max_retries=5, delay=5):
+    global db_pool
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            if not DATABASE_URL:
+                raise Exception("DATABASE_URL not set")
+
+            db_pool = pool.SimpleConnectionPool(
+                1,
+                10,
+                DATABASE_URL,
+                sslmode="require"
+            )
+
+            logger.info(f"✅ Database connected (attempt {attempt})")
+            return
+
+        except Exception as e:
+            logger.error(f"❌ DB connection failed (attempt {attempt}): {e}")
+
+            if attempt < max_retries:
+                import time
+                logger.info(f"⏳ Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logger.error("🚨 All DB connection attempts failed. Running without DB.")
+                db_pool = None
 
 def get_conn():
     return db_pool.getconn()
