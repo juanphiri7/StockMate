@@ -784,7 +784,8 @@ def shutdown_scheduler(*args):
 # ========== App Startup ==========
 def start_services():
     init_db()
-   
+    init_db_pool()
+
     # Start scheduler
     scheduler.add_job(
         scheduled_scrape, 
