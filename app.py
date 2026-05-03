@@ -797,7 +797,7 @@ def start_services():
     scheduler.add_job(
         scheduled_scrape, 
         trigger = "interval", 
-        minutes = 10, 
+        minutes = 5, 
         next_run_time = datetime.utcnow()
     )
     if not scheduler.running:
