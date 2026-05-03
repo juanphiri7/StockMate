@@ -147,7 +147,7 @@ def init_db():
 
 # ==================== SCRAPE MSE ====================
 def scrape_mse():
-    url = "https://www.mse.co.mw/"
+    url = "https://mse.co.mw//"
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
