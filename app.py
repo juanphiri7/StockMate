@@ -151,15 +151,18 @@ def scrape_mse():
     headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()
-        print(response.status_code)
-        print(response.text[:500])
+        response.raise_for_status()        
         soup = BeautifulSoup(response.content, "html.parser")
-        table = soup.find("table", {"class": "table"})
+        table = soup.find_all("table")
         if not table:
+            logger.error("No tables found on page")
             return []
+
+        table = tables[0]  # fallback to first table
+
         data = []
         rows = table.find_all("tr")
+
         for row in rows[1:]:
             cols = row.find_all("td")
             if len(cols) >= 5:
@@ -170,6 +173,8 @@ def scrape_mse():
                     'Volume': safe_int(cols[3].text),
                     'Turnover (MK)': safe_float(cols[4].text)
                 })
+
+        logger.info(f"Scraped {len(data)} rows") 
         return data
     except Exception as e:
         logger.error(f"Scraping Error: {e}")
