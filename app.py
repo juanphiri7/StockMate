@@ -147,21 +147,30 @@ def init_db():
 
 # ==================== SCRAPE MSE ====================
 def scrape_mse():
-    url = "https://mse.co.mw//"
+    url = "https://www.mse.co.mw//"
 
+    session = requests.Session()
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml"
+        "Accept": "text/html,application/xhtml+xml",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()        
+        # First request (establish cookies)
+        session.get(url, headers=headers, timeout=15)
+
+        # Second request (actual fetch)
+        response = session.get(url, headers=headers, timeout=30)
+        response.raise_for_status() 
+       
         soup = BeautifulSoup(response.content, "html.parser")
+
         table = soup.find_all("table")
         if not table:
-            logger.error("No tables found on page")
+            logger.error("No Tables Found")
             return []
 
         table = tables[0]  # fallback to first table
@@ -803,7 +812,7 @@ def start_services():
     scheduler.add_job(
         scheduled_scrape, 
         trigger = "interval", 
-        minutes = 5, 
+        minutes = 10, 
         next_run_time = datetime.utcnow()
     )
     if not scheduler.running:
