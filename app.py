@@ -147,8 +147,14 @@ def init_db():
 
 # ==================== SCRAPE MSE ====================
 def scrape_mse():
-    url = "https://www.stockwatch.pro/"
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    url = "https://www.mse.co.mw/"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml"
+    }
+
     try:
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()        
