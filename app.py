@@ -147,7 +147,7 @@ def init_db():
 
 # ==================== SCRAPE MSE ====================
 def scrape_mse():
-    url = "https://www.mse.co.mw//"
+    url = "https://www.mse.co.mw/"
 
     session = requests.Session()
     headers = {
