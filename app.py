@@ -152,6 +152,8 @@ def scrape_mse():
     try:
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
+        print(response.status_code)
+        print(response.text[:500])
         soup = BeautifulSoup(response.content, "html.parser")
         table = soup.find("table", {"class": "table"})
         if not table:
