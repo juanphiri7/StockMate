@@ -5,6 +5,7 @@ import os
 import re
 import json
 import pytz
+import time
 import fitz
 import atexit
 import signal
