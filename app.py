@@ -1,4 +1,4 @@
-#StockMate by Juan
+#StockMate by El-Juan47
 
 # ========== Imports ==========
 import os
