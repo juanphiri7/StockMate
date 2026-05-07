@@ -259,6 +259,14 @@ def get_stocks():
   
 # ======= Latest Prices Route
 @app.route("/latest_prices", methods=["GET"])
+def get_latest_prices_query():
+    return """
+        SELECT DISTINCT ON (counter)
+            counter, last_price, change, volume, turnover, timestamp
+        FROM stocks
+        ORDER BY counter, timestamp DESC
+    """)
+    
 def latest_prices():
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -277,18 +285,13 @@ def latest_prices():
             })
         return jsonify(result)
         
-def get_latest_prices_query():
-    return """
-        SELECT DISTINCT ON (counter)
-            counter, last_price, change, volume, turnover, timestamp
-        FROM stocks
-        ORDER BY counter, timestamp DESC
-    """)
+
     
 # ======= History Route
 @app.route("/history/<counter>", methods=["GET"])
 def get_history(counter):
-    limit = int(request.args.get("limit", 30))
+    limit = int(request.args.get("limit", 50))
+    
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -301,13 +304,33 @@ def get_history(counter):
 
         rows = cursor.fetchall()
         
-        history = [{
-            "timestamp": convert_to_local_time(r[0]), 
-            "last_price": float(r[1]) if r[1] else None
-        } for r in rows]
+    return jsonify([
+        {
+            "timestamp": convert_to_local_time(r[0]),
+            "price": float(r[1]) if r[1] else None
+        }
+        for r in rows
+    ])
 
-        return jsonify(list(reversed(history)))
-            
+    days = int(request.args.get("days", 30))
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT timestamp, last_price
+            FROM stocks
+            WHERE counter = %s
+            AND timestamp >= NOW() - INTERVAL '%s days'
+            ORDER BY timestamp ASC
+        """, (counter.upper(), days))
+
+        rows = cursor.fetchall()
+
+    return jsonify([
+        {"timestamp": convert_to_local_time(r[0]), "price": float(r[1])}
+        for r in rows
+    ])
+    
 # ======= Insert Fundamentals Route
 @app.route("/insert_fundamentals", methods=["POST"])
 def insert_fundamentals():
@@ -679,7 +702,6 @@ def admin_add():
             cursor.execute("""
                 INSERT INTO fundamentals (counter, net_profit, number_of_shares, dividend_paid)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT (counter) 
                 DO UPDATE SET 
                     net_profit = EXCLUDED.net_profit,
                     number_of_shares = EXCLUDED.number_of_shares,
@@ -802,7 +824,6 @@ def admin_add_price():
             cursor.execute("""
                 INSERT INTO stocks (counter, last_price, change, volume, turnover)
                 VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (counter)
                 DO UPDATE SET
                     last_price = EXCLUDED.last_price,
                     change = EXCLUDED.change,
