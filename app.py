@@ -151,12 +151,15 @@ def scrape_mse():
     url = "https://www.mse.co.mw/"
 
     session = requests.Session()
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {"User-Agent": "Mozilla/5.0",
+        "Accept-Language": "en-US,en;q=0.9"
+    }
 
     try:
         # First request (establish cookies)
         session.get(url, headers=headers, timeout=30)
-
+        logger.info(f"Status Code: {response.status_code}")
+        
         # Second request (actual fetch)
         response = session.get(url, headers=headers, timeout=30)
         response.raise_for_status() 
@@ -223,12 +226,10 @@ def home():
 # ======= Scrape Route
 @app.route("/scrape", methods=["GET"])
 def scrape_and_save():
-    data = scrape_mse()
-    if data:
-        save_data(data)
-        return jsonify({"message": "Success! Data Scraped and Saved", "scraped": len(data), "inserted": len(data)})
-    else:
-        return jsonify({"error": "Failed to Scrape Data"}), 500
+    return jsonify({
+        "message": "Scraper currently disabled in production",
+        "mode": "manual"
+    })
       
 # ======= Stocks Route
 @app.route("/stocks", methods=["GET"])
@@ -261,12 +262,7 @@ def get_stocks():
 def latest_prices():
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT DISTINCT ON (counter)
-                counter, last_price, change, volume, turnover, timestamp
-            FROM stocks
-            ORDER BY counter, timestamp DESC
-        """)
+        cursor.execute(get_latest_prices_query())
         rows = cursor.fetchall()
        
         result = []
@@ -280,7 +276,15 @@ def latest_prices():
                 "timestamp": convert_to_local_time(r[5])
             })
         return jsonify(result)
-
+        
+def get_latest_prices_query():
+    return """
+        SELECT DISTINCT ON (counter)
+            counter, last_price, change, volume, turnover, timestamp
+        FROM stocks
+        ORDER BY counter, timestamp DESC
+    """)
+    
 # ======= History Route
 @app.route("/history/<counter>", methods=["GET"])
 def get_history(counter):
@@ -652,6 +656,7 @@ def admin_dashboard():
     html = "<h2>Company Fundamentals (DB)</h2><ul>"
     for r in rows:
         html += f"<li><strong>{r[0]}</strong> — <a href='/admin/edit/{r[0]}'>Edit</a></li>"
+        html += "<p><a href='/admin/add_price'>Add / Update Prices</a></p>"
     html += "</ul>"
     html += "<p><a href='/admin/add'>Add new company</a></p>"
     return html
@@ -776,20 +781,60 @@ def edit_counter(counter):
         <a href="/admin/dashboard">← Back to Dashboard</a>
     """)
 
+# ========== Admin Add/Update Price Route
+@app.route("/admin/add_price", methods=["GET", "POST"])
+def admin_add_price():
+    if not session.get("logged_in"):
+        return redirect(url_for("admin_login"))
+
+    if request.method == "POST":
+        counter = normalize_counter(request.form.get("counter"))
+        last_price = safe_float(request.form.get("last_price"))
+        change = safe_float(request.form.get("change"))
+        volume = safe_int(request.form.get("volume"))
+        turnover = safe_float(request.form.get("turnover"))
+
+        if not counter:
+            return "Invalid counter", 400
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO stocks (counter, last_price, change, volume, turnover)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (counter)
+                DO UPDATE SET
+                    last_price = EXCLUDED.last_price,
+                    change = EXCLUDED.change,
+                    volume = EXCLUDED.volume,
+                    turnover = EXCLUDED.turnover,
+                    timestamp = CURRENT_TIMESTAMP;
+            """, (counter, last_price, change, volume, turnover))
+            conn.commit()
+
+        return redirect(url_for("admin_dashboard"))
+
+    return render_template_string("""
+        <h2>Add / Update Stock Price</h2>
+        <form method="POST">
+            Counter: <input name="counter"/><br/>
+            Last Price: <input name="last_price"/><br/>
+            % Change: <input name="change"/><br/>
+            Volume: <input name="volume"/><br/>
+            Turnover: <input name="turnover"/><br/>
+            <button type="submit">Save</button>
+        </form>
+        <a href="/admin/dashboard">← Back</a>
+    """)
+
 
 # ========== SCHEDULER ==========
 scheduler = BackgroundScheduler()
 
 def scheduled_scrape():
-    logger.info("Scheduled scrape running...")
-    try:
-        data = scrape_mse()
-        if data:
-            save_data(data)
-            logger.info("Scheduled scrape Successful")
-    except Exception as e:
-        logger.error(str(e))
-
+    logger.info("Auto scraping disabled — using admin manual input")
+    logger.info("Scraper disabled — manual mode active")
+     
 def shutdown_scheduler(*args):
     try:
         scheduler.shutdown(wait=True)
